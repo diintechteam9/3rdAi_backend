@@ -618,4 +618,30 @@ router.put('/settings/openai-api-key', async (req, res) => {
   }
 });
 
+// ============ AI Provider Setting ============
+
+router.get('/settings/ai-provider', async (req, res) => {
+  try {
+    const settings = await AppSettings.getSettings();
+    res.json({ success: true, data: { aiProvider: settings.aiProvider || 'gemini' } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+router.put('/settings/ai-provider', async (req, res) => {
+  try {
+    const { aiProvider } = req.body;
+    if (!['gemini', 'openai'].includes(aiProvider)) {
+      return res.status(400).json({ success: false, message: 'aiProvider must be gemini or openai' });
+    }
+    const settings = await AppSettings.getSettings();
+    settings.aiProvider = aiProvider;
+    await settings.save();
+    res.json({ success: true, message: `AI provider set to ${aiProvider}`, data: { aiProvider } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 export default router;

@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 4000;
 
 server.listen(PORT, () => {
   console.log('\n' + '='.repeat(80));
-  console.log('🚀 BRAHMAKOSH SERVER STARTED');
+  console.log('🚀 3rdAI SERVER STARTED');
   console.log('='.repeat(80));
   console.log(`✅ Server is running on port ${PORT}`);
   console.log(`✅ Environment: ${process.env.NODE_ENV || 'development'}`);

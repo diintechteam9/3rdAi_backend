@@ -23,6 +23,12 @@ const chatSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  clientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client',
+    required: false,
+    index: true
+  },
   title: {
     type: String,
     default: 'New Chat'
@@ -45,7 +51,7 @@ chatSchema.index({ userId: 1, createdAt: -1 });
 chatSchema.index({ userId: 1, updatedAt: -1 });
 
 // Update updatedAt before saving
-chatSchema.pre('save', function(next) {
+chatSchema.pre('save', function (next) {
   this.updatedAt = Date.now();
   next();
 });

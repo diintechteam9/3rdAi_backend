@@ -8,56 +8,24 @@ import { authenticate } from '../../middleware/auth.js';
 
 const router = express.Router();
 
-// Resolve a client identifier that could be:
-// - Mongo ObjectId (preferred)
-// - clientId string like "CLI-XXXXXX" (legacy)
-const resolveClientObjectId = async (candidate) => {
-  if (!candidate) return null;
-  if (mongoose.Types.ObjectId.isValid(candidate)) return candidate;
-  const client = await Client.findOne({ clientId: candidate }).select('_id');
-  return client?._id || null;
-};
-
 const withClientIdString = (doc) => {
   if (!doc) return doc;
   const obj = doc.toObject ? doc.toObject() : doc;
-  
-  // If clientId is populated with Client document
   if (obj.clientId && typeof obj.clientId === 'object') {
-    // Extract clientId string field (CLI-ABC123 format)
     if (obj.clientId.clientId) {
       return { ...obj, clientId: obj.clientId.clientId };
     }
-    // Fallback: If clientId field missing in Client document
-    console.warn('Client document missing clientId field:', obj.clientId._id);
-    return { ...obj, clientId: null };
   }
-  
   return obj;
 };
 
 // Helper function to extract clientId from request (supports both client and user tokens)
-const getClientId = async (req) => {
-  // If user role, get clientId from decoded token first (most reliable), then populated user object
-  if (req.user.role === 'user') {
-    const rawClientId = req.decodedClientId || req.user.clientId?._id || req.user.clientId || req.user.tokenClientId || req.user.clientId?.clientId;
-    const clientId = await resolveClientObjectId(rawClientId);
-    if (!clientId) {
-      throw new Error('Client ID not found for user token. Please ensure your token includes clientId.');
-    }
-    return clientId;
-  }
-  // For client role, use user._id (which is the client's MongoDB _id) or fallback to clientId string
-  const rawClientId = req.user._id || req.user.id || req.user.clientId;
-  const clientId = await resolveClientObjectId(rawClientId);
-  if (!clientId) {
-    throw new Error('Client ID not found. Please login again.');
-  }
-  return clientId;
+const getClientId = (req) => {
+  return req.clientId;
 };
 
 const storage = multer.memoryStorage();
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
@@ -71,32 +39,12 @@ const upload = multer({
 
 router.get('/', authenticate, async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    console.log('[Brand Assets GET]', {
-      clientId: clientId?.toString(),
-      userId: req.user?._id?.toString(),
-      userRole: req.user?.role,
-      userEmail: req.user?.email,
-      readableClientId: req.user.role === 'client' 
-        ? req.user.clientId 
-        : (req.user.clientId?.clientId || req.user.clientId?._id?.toString() || 'N/A'),
-      includeInactive: req.query.includeInactive === 'true'
-    });
-    
     // Build query - exclude deleted items, optionally include inactive items
-    const query = { clientId: clientId, isDeleted: false };
+    const query = { ...req.tenantFilter, isDeleted: false };
     if (req.query.includeInactive !== 'true') {
       query.isActive = true;
     }
-    
+
     const brandAssets = await BrandAsset.find(query)
       .populate('clientId', 'clientId')
       .sort({ createdAt: -1 });
@@ -146,35 +94,15 @@ router.get('/', authenticate, async (req, res) => {
 router.post('/', authenticate, async (req, res) => {
   try {
     const { headingText, brandLogoName, webLinkUrl, socialLink } = req.body;
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
+    const clientId = req.clientId;
+
+    // Ensure permission
+    if (!['client', 'user', 'super_admin'].includes(req.user.role)) {
+      return res.status(403).json({ success: false, message: 'Access denied.' });
     }
-    
-    // Ensure user has permission (client or user role)
-    if (!['client', 'user'].includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Client or user role required.'
-      });
-    }
-    console.log('[Brand Assets POST]', {
-      clientId: clientId?.toString(),
-      userId: req.user?._id?.toString(),
-      userRole: req.user?.role,
-      userEmail: req.user?.email
-    });
-    
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Client ID not found. Please login again.'
-      });
+
+    if (!clientId && req.user.role !== 'super_admin') {
+      return res.status(400).json({ success: false, message: 'Client context required.' });
     }
 
     if (!headingText || !brandLogoName || !webLinkUrl || !socialLink) {
@@ -212,38 +140,13 @@ router.post('/', authenticate, async (req, res) => {
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const { headingText, brandLogoName, webLinkUrl, socialLink } = req.body;
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
-    // Ensure user has permission (client or user role)
-    if (!['client', 'user'].includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Client or user role required.'
-      });
-    }
-    console.log('[Brand Assets PUT]', {
-      clientId: clientId?.toString(),
-      userId: req.user?._id?.toString(),
-      userRole: req.user?.role
-    });
-    
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Client ID not found. Please login again.'
-      });
+    const query = { _id: req.params.id, ...req.tenantFilter, isDeleted: false };
+    if (req.query.includeInactive !== 'true' && req.user.role !== 'super_admin') {
+      query.isActive = true;
     }
 
     const brandAsset = await BrandAsset.findOneAndUpdate(
-      { _id: req.params.id, clientId: clientId, isDeleted: false, isActive: true },
+      query,
       { headingText, brandLogoName, webLinkUrl, socialLink },
       { new: true, runValidators: true }
     ).populate('clientId', 'clientId');
@@ -271,41 +174,8 @@ router.put('/:id', authenticate, async (req, res) => {
 
 router.delete('/:id', authenticate, async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
-    // Ensure user has permission (client or user role)
-    if (!['client', 'user'].includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Client or user role required.'
-      });
-    }
-    console.log('[Brand Assets DELETE]', {
-      clientId: clientId?.toString(),
-      userId: req.user?._id?.toString(),
-      userRole: req.user?.role,
-      readableClientId: req.user.role === 'client' ? req.user.clientId : (req.user.clientId?.clientId || 'N/A')
-    });
-    
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Client ID not found. Please login again.'
-      });
-    }
-    const brandAsset = await BrandAsset.findOne({
-      _id: req.params.id,
-      clientId: clientId,
-      isDeleted: false
-    }).populate('clientId', 'clientId');
+    const query = { _id: req.params.id, ...req.tenantFilter, isDeleted: false };
+    const brandAsset = await BrandAsset.findOne(query).populate('clientId', 'clientId');
 
     if (!brandAsset) {
       return res.status(404).json({
@@ -334,39 +204,9 @@ router.delete('/:id', authenticate, async (req, res) => {
 // PATCH /api/brand-assets/:id/toggle - Toggle brand asset status (enable/disable)
 router.patch('/:id/toggle', authenticate, async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
-    // Ensure user has permission (client or user role)
-    if (!['client', 'user'].includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Client or user role required.'
-      });
-    }
-    console.log('[Brand Assets TOGGLE]', {
-      clientId: clientId?.toString(),
-      userId: req.user?._id?.toString(),
-      userRole: req.user?.role
-    });
-    
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Client ID not found. Please login again.'
-      });
-    }
-    
     const brandAsset = await BrandAsset.findOne({
       _id: req.params.id,
-      clientId: clientId,
+      ...req.tenantFilter,
       isDeleted: false
     }).populate('clientId', 'clientId');
 
@@ -398,40 +238,10 @@ router.patch('/:id/toggle', authenticate, async (req, res) => {
 // Upload image for brand asset
 router.post('/:id/upload-image', authenticate, upload.single('brandLogoImage'), async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
-    // Ensure user has permission (client or user role)
-    if (!['client', 'user'].includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Client or user role required.'
-      });
-    }
-    console.log('[Brand Assets Upload Image]', {
-      clientId: clientId?.toString(),
-      userId: req.user?._id?.toString(),
-      userRole: req.user?.role
-    });
-    
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Client ID not found. Please login again.'
-      });
-    }
     const brandAsset = await BrandAsset.findOne({
       _id: req.params.id,
-      clientId: clientId,
-      isDeleted: false,
-      isActive: true
+      ...req.tenantFilter,
+      isDeleted: false
     }).populate('clientId', 'clientId');
 
     if (!brandAsset) {
@@ -489,35 +299,10 @@ router.post('/:id/upload-image', authenticate, upload.single('brandLogoImage'), 
 // Upload background image for brand asset
 router.post('/:id/upload-background-image', authenticate, upload.single('backgroundLogoImage'), async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
-    if (!['client', 'user'].includes(req.user.role)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Client or user role required.'
-      });
-    }
-    
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        message: 'Client ID not found. Please login again.'
-      });
-    }
-    
     const brandAsset = await BrandAsset.findOne({
       _id: req.params.id,
-      clientId: clientId,
-      isDeleted: false,
-      isActive: true
+      ...req.tenantFilter,
+      isDeleted: false
     }).populate('clientId', 'clientId');
 
     if (!brandAsset) {

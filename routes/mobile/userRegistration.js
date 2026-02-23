@@ -30,13 +30,24 @@ const upload = multer({
  */
 router.post('/register-with-image', upload.single('image'), async (req, res) => {
   try {
-    const { email, password, name, dob, timeOfBirth, placeOfBirth, gowthra, profession } = req.body;
+    const { email, password, name, dob, timeOfBirth, placeOfBirth, gowthra, profession, clientId } = req.body;
     const imageFile = req.file;
 
-    if (!email || !password) {
+    if (!email || !password || !clientId) {
       return res.status(400).json({
         success: false,
-        message: 'Email and password are required'
+        message: 'Email, password, and Client ID are required'
+      });
+    }
+
+    // Resolve client
+    const Client = (await import('../../models/Client.js')).default;
+    const clientDoc = await Client.findOne({ clientId: clientId.toString().toUpperCase() });
+
+    if (!clientDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid Client ID'
       });
     }
 
@@ -81,6 +92,7 @@ router.post('/register-with-image', upload.single('image'), async (req, res) => 
     const user = new User({
       email: email.toLowerCase().trim(),
       password,
+      clientId: clientDoc._id,
       profileImage: profileImageKey,
       profile: {
         name: name || '',

@@ -8,43 +8,7 @@ import Client from '../models/Client.js';
 
 const router = express.Router();
 
-/**
- * Helper function to get client ID based on user role
- */
-const getClientIdForQuery = (user) => {
-  if (user.role === 'client') {
-    return user._id;
-  }
-  if (user.role === 'user') {
-    // For users, get clientId from populated field or token
-    return user.clientId?._id || user.clientId || user.tokenClientId;
-  }
-  // Admin and super_admin don't filter by clientId
-  return null;
-};
-
-/**
- * Helper function to check if user has access to a specific user record
- */
-const checkUserAccess = (requestingUser, targetUser) => {
-  // Super admin and admin have access to all users
-  if (requestingUser.role === 'super_admin' || requestingUser.role === 'admin') {
-    return true;
-  }
-
-  // Client can only access their own users
-  if (requestingUser.role === 'client') {
-    const targetClientId = targetUser.clientId?._id?.toString() || targetUser.clientId?.toString();
-    return targetClientId === requestingUser._id.toString();
-  }
-
-  // User can only access their own record
-  if (requestingUser.role === 'user') {
-    return targetUser._id.toString() === requestingUser._id.toString();
-  }
-
-  return false;
-};
+// Authorization is handled via authorize middleware and data isolation via req.tenantFilter
 
 /**
  * Get client's own users
@@ -59,13 +23,7 @@ router.get('/users', authenticate, authorize('client', 'admin', 'super_admin', '
     const pageSize = Math.min(Math.max(parseInt(limit) || 25, 1), 100);
     const skip = (pageNum - 1) * pageSize;
 
-    let query = {};
-
-    if (req.user.role === 'client') {
-      query.clientId = req.user._id;
-    } else if (req.user.role === 'user') {
-      query._id = req.user._id;
-    }
+    let query = { ...req.tenantFilter };
 
     if (search && search.trim()) {
       const regex = new RegExp(search.trim(), 'i');
@@ -132,11 +90,17 @@ router.post('/users', authenticate, authorize('client', 'admin', 'super_admin'),
 
     console.log('[Client API] Creating user for client:', req.user._id.toString());
 
+    const clientId = req.user.role === 'client' ? req.user._id : req.body.clientId;
+
+    if (!clientId && req.user.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Client context required.' });
+    }
+
     const user = new User({
       email,
       password,
       profile: profile || {},
-      clientId: req.user.role === 'client' ? req.user._id : req.body.clientId,
+      clientId: clientId,
       emailVerified: true,
       loginApproved: true,
       registrationStep: 3
@@ -177,19 +141,11 @@ router.put('/users/:userId', authenticate, authorize('client', 'admin', 'super_a
     const { userId } = req.params;
     const { profile, isActive } = req.body;
 
-    const user = await User.findById(userId);
+    const user = await User.findOne({ _id: userId, ...req.tenantFilter });
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
-      });
-    }
-
-    // Check access permissions
-    if (!checkUserAccess(req.user, user)) {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to update this user'
+        message: 'User not found or unauthorized'
       });
     }
 
@@ -245,19 +201,11 @@ router.put('/users/:userId/live-location', authenticate, authorize('client', 'ad
     const { userId } = req.params;
     const { latitude, longitude, formattedAddress, city, state, country } = req.body;
 
-    const user = await User.findById(userId);
+    const user = await User.findOne({ _id: userId, ...req.tenantFilter });
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
-      });
-    }
-
-    // Check access permissions
-    if (!checkUserAccess(req.user, user)) {
-      return res.status(403).json({
-        success: false,
-        message: 'You do not have permission to update location for this user'
+        message: 'User not found or unauthorized'
       });
     }
 
@@ -330,21 +278,12 @@ router.delete('/users/:userId', authenticate, authorize('client', 'admin', 'supe
   try {
     const { userId } = req.params;
 
-    const user = await User.findById(userId);
+    const user = await User.findOne({ _id: userId, ...req.tenantFilter });
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'User not found or unauthorized'
       });
-    }
-
-    if (req.user.role === 'client') {
-      if (!user.clientId || user.clientId.toString() !== req.user._id.toString()) {
-        return res.status(403).json({
-          success: false,
-          message: 'You can only delete your own users'
-        });
-      }
     }
 
     await User.findByIdAndDelete(userId);
@@ -365,14 +304,9 @@ router.delete('/users/:userId', authenticate, authorize('client', 'admin', 'supe
 });
 
 
-/**
- * Get client dashboard overview
- * GET /api/client/dashboard/overview
- * Access: client
- */
 router.get('/dashboard/overview', authenticate, authorize('client'), async (req, res) => {
   try {
-    const totalUsers = await User.countDocuments({ clientId: req.user._id });
+    const totalUsers = await User.countDocuments(req.tenantFilter);
 
     res.json({
       success: true,

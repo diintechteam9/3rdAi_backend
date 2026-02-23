@@ -22,6 +22,12 @@ const conversationSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  clientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client',
+    required: true,
+    index: true
+  },
 
   // Status Management
   status: {

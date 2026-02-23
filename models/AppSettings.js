@@ -14,6 +14,11 @@ const appSettingsSchema = new mongoose.Schema({
     type: String,
     default: null,
     trim: true
+  },
+  aiProvider: {
+    type: String,
+    enum: ['gemini', 'openai'],
+    default: 'gemini'
   }
 }, {
   timestamps: true,

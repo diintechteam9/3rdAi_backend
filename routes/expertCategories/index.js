@@ -1,7 +1,6 @@
 import express from 'express';
 const router = express.Router();
 
-// Import route handlers
 import {
   createExpertCategory,
   getAllExpertCategories,
@@ -15,6 +14,11 @@ import {
   upload,
   uploadCategoryImage
 } from './upload.js';
+
+import { authenticate } from '../../middleware/auth.js';
+
+// Apply authentication to all routes
+router.use(authenticate);
 
 // CRUD Routes
 router.post('/', createExpertCategory);

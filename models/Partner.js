@@ -5,14 +5,14 @@ const partnerSchema = new mongoose.Schema({
   // Basic Information
   name: {
     type: String,
-    
+
     trim: true
   },
   // Link partner to a client (used for "experts" created by clients)
   clientId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',
-    default: null,
+    required: true,
     index: true
   },
   // Optional category (compatible with ExpertCategory usage)
@@ -24,7 +24,7 @@ const partnerSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-    
+
     unique: true,
     lowercase: true,
     trim: true
@@ -61,7 +61,7 @@ const partnerSchema = new mongoose.Schema({
     default: null,
     maxlength: 300 // Short bio max 50 words ~300 characters
   },
-  
+
   // Professional Information
   specialization: {
     type: [String],
@@ -118,7 +118,7 @@ const partnerSchema = new mongoose.Schema({
     type: [String],
     default: [], // Max 5 skills from predefined list
     validate: {
-      validator: function(arr) {
+      validator: function (arr) {
         return arr.length <= 5;
       },
       message: 'Maximum 5 skills allowed'
@@ -137,7 +137,7 @@ const partnerSchema = new mongoose.Schema({
     enum: ['Call', 'Chat', 'Video'],
     default: [] // e.g., ['Call', 'Chat']
   },
-  
+
   // Location Information
   location: {
     city: {
@@ -163,7 +163,7 @@ const partnerSchema = new mongoose.Schema({
       }
     }
   },
-  
+
   // Ratings and Reviews
   rating: {
     type: Number,
@@ -183,7 +183,7 @@ const partnerSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  
+
   // Pricing
   pricePerSession: {
     type: Number,
@@ -197,7 +197,7 @@ const partnerSchema = new mongoose.Schema({
     type: String,
     default: 'INR'
   },
-  
+
   // Availability
   isActive: {
     type: Boolean,
@@ -212,7 +212,7 @@ const partnerSchema = new mongoose.Schema({
     enum: ['Weekdays', 'Weekends', 'Flexible'],
     default: []
   },
-  
+
   // Online Status Management
   onlineStatus: {
     type: String,
@@ -227,7 +227,7 @@ const partnerSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
-  
+
   // Conversation Management
   activeConversationsCount: {
     type: Number,
@@ -241,7 +241,7 @@ const partnerSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  
+
   // Work Schedule
   workingHours: {
     monday: { available: { type: Boolean, default: true }, start: String, end: String },
@@ -252,7 +252,7 @@ const partnerSchema = new mongoose.Schema({
     saturday: { available: { type: Boolean, default: true }, start: String, end: String },
     sunday: { available: { type: Boolean, default: false }, start: String, end: String }
   },
-  
+
   // Bank Details (for payments)
   bankDetails: {
     accountNumber: { type: String, default: null },
@@ -261,14 +261,14 @@ const partnerSchema = new mongoose.Schema({
     bankName: { type: String, default: null },
     upiId: { type: String, default: null }
   },
-  
+
   // Verification Documents
   documents: {
     idProof: { type: String, default: null },
     addressProof: { type: String, default: null },
     certificates: { type: [String], default: [] }
   },
-  
+
   // Social Media Links
   socialMedia: {
     website: { type: String, default: null },
@@ -277,7 +277,7 @@ const partnerSchema = new mongoose.Schema({
     twitter: { type: String, default: null },
     youtube: { type: String, default: null }
   },
-  
+
   // Statistics
   stats: {
     totalEarnings: { type: Number, default: 0 },
@@ -286,7 +286,7 @@ const partnerSchema = new mongoose.Schema({
     averageSessionDuration: { type: Number, default: 0 }, // in minutes
     responseTime: { type: Number, default: 0 } // average response time in minutes
   },
-  
+
   // Settings
   settings: {
     emailNotifications: { type: Boolean, default: true },
@@ -295,7 +295,7 @@ const partnerSchema = new mongoose.Schema({
     autoAcceptRequests: { type: Boolean, default: false },
     privateProfile: { type: Boolean, default: false }
   },
-  
+
   // Account Status
   isBlocked: {
     type: Boolean,
@@ -315,7 +315,7 @@ const partnerSchema = new mongoose.Schema({
     type: Date,
     default: null
   },
-  
+
   // Verification
   verificationStatus: {
     type: String,
@@ -331,7 +331,7 @@ const partnerSchema = new mongoose.Schema({
     ref: 'Admin',
     default: null
   },
-  
+
   // Reset Password
   resetPasswordToken: {
     type: String,
@@ -367,11 +367,11 @@ partnerSchema.index({ expertiseCategory: 1 });
 partnerSchema.index({ 'location.coordinates.latitude': 1, 'location.coordinates.longitude': 1 }); // For geospatial queries
 
 // Hash password before saving
-partnerSchema.pre('save', async function(next) {
+partnerSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     return next();
   }
-  
+
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
@@ -382,17 +382,17 @@ partnerSchema.pre('save', async function(next) {
 });
 
 // Method to compare password
-partnerSchema.methods.comparePassword = async function(candidatePassword) {
+partnerSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Method to check if partner can accept more conversations
-partnerSchema.methods.canAcceptConversation = function() {
+partnerSchema.methods.canAcceptConversation = function () {
   return this.activeConversationsCount < this.maxConversations;
 };
 
 // Method to update online status based on active conversations
-partnerSchema.methods.updateBusyStatus = async function() {
+partnerSchema.methods.updateBusyStatus = async function () {
   if (this.activeConversationsCount >= this.maxConversations) {
     this.onlineStatus = 'busy';
   } else if (this.onlineStatus === 'busy' && this.activeConversationsCount < this.maxConversations) {
@@ -402,14 +402,14 @@ partnerSchema.methods.updateBusyStatus = async function() {
 };
 
 // Method to increment active conversations
-partnerSchema.methods.incrementActiveConversations = async function() {
+partnerSchema.methods.incrementActiveConversations = async function () {
   this.activeConversationsCount += 1;
   this.totalConversations += 1;
   await this.updateBusyStatus();
 };
 
 // Method to decrement active conversations
-partnerSchema.methods.decrementActiveConversations = async function() {
+partnerSchema.methods.decrementActiveConversations = async function () {
   if (this.activeConversationsCount > 0) {
     this.activeConversationsCount -= 1;
     await this.updateBusyStatus();
@@ -417,7 +417,7 @@ partnerSchema.methods.decrementActiveConversations = async function() {
 };
 
 // Virtual for full name (if needed)
-partnerSchema.virtual('isAvailable').get(function() {
+partnerSchema.virtual('isAvailable').get(function () {
   return this.onlineStatus === 'online' && this.canAcceptConversation();
 });
 

@@ -9,64 +9,19 @@ import { getobject } from '../utils/s3.js';
 import Partner from '../models/Partner.js';
 import User from '../models/User.js';
 
+import { authenticate as authMiddleware } from '../middleware/authMiddleware.js';
+
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production-to-a-strong-random-string';
 
-// Middleware to authenticate
-const authenticate = async (req, res, next) => {
-  try {
-    console.log('🔐 Authentication middleware started');
-    console.log('📋 Headers:', req.headers);
-
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-
-    if (!token) {
-      console.log('❌ No token provided');
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
-
-    console.log('🔑 Token received:', token.substring(0, 20) + '...');
-
-    const decoded = jwt.verify(token, JWT_SECRET);
-    console.log('✅ Token decoded:', decoded);
-
-    let user;
-    if (decoded.role === 'partner') {
-      const partnerIdFromToken = decoded.userId || decoded.partnerId; // Support both
-      user = await Partner.findById(partnerIdFromToken);
-      req.userId = partnerIdFromToken;
-      req.userType = 'partner';
-    } else if (decoded.role === 'user') {
-      console.log('👤 User type: USER');
-      user = await User.findById(decoded.userId);
-      req.userId = decoded.userId;
-      req.userType = 'user';
-    }
-
-    if (!user) {
-      console.log('❌ User not found in database');
-      return res.status(401).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-
-    console.log('✅ User authenticated:', { id: req.userId, type: req.userType });
-    req.user = user;
+// Middleware to adapt global authenticate to local chatRoutes expectations
+const authenticate = [
+  authMiddleware,
+  (req, res, next) => {
+    req.userId = req.user._id;
+    req.userType = req.user.role;
     next();
-  } catch (error) {
-    console.error('❌ Authentication error:', error.message);
-    console.error('Stack:', error.stack);
-    res.status(401).json({
-      success: false,
-      message: 'Invalid token',
-      error: error.message
-    });
   }
-};
+];
 
 // ==================== PARTNER STATUS MANAGEMENT ====================
 
@@ -152,11 +107,11 @@ router.get('/partner/status', authenticate, async (req, res) => {
 // @access  Private
 router.get('/partners', authenticate, async (req, res) => {
   try {
-    const totalPartners = await Partner.countDocuments();
-    const activePartners = await Partner.countDocuments({ isActive: true });
-    const verifiedPartners = await Partner.countDocuments({ isVerified: true });
+    const totalPartners = await Partner.countDocuments(req.tenantFilter);
+    const activePartners = await Partner.countDocuments({ isActive: true, ...req.tenantFilter });
+    const verifiedPartners = await Partner.countDocuments({ isVerified: true, ...req.tenantFilter });
 
-    const partners = await Partner.find({ isActive: true, isVerified: true })
+    const partners = await Partner.find({ isActive: true, isVerified: true, ...req.tenantFilter })
       .select('name email phone profilePicture bio specialization rating totalSessions experience experienceRange expertise expertiseCategory skills languages qualifications consultationModes location totalRatings completedSessions pricePerSession currency onlineStatus activeConversationsCount maxConversations lastActiveAt availabilityPreference')
       .sort({ rating: -1, totalSessions: -1 })
       .lean();
@@ -191,7 +146,7 @@ router.get('/partners', authenticate, async (req, res) => {
         totalInDb: totalPartners,
         active: activePartners,
         verified: verifiedPartners,
-        query: { isActive: true, isVerified: true }
+        query: { isActive: true, isVerified: true, ...req.tenantFilter }
       }
     });
   } catch (error) {
@@ -209,7 +164,7 @@ router.get('/partners', authenticate, async (req, res) => {
 router.get('/partners/:partnerId', authenticate, async (req, res) => {
   try {
     const { partnerId } = req.params;
-    const partner = await Partner.findById(partnerId)
+    const partner = await Partner.findOne({ _id: partnerId, ...req.tenantFilter })
       .select('-password -resetPasswordToken -resetPasswordExpires')
       .lean();
     if (!partner || !partner.isActive) {
@@ -264,7 +219,7 @@ router.post('/conversations', authenticate, async (req, res) => {
     const finalUserId = req.userType === 'user' ? req.userId : userId;
 
     // Check if partner exists (optional availability check could go here)
-    const partner = await Partner.findById(finalPartnerId);
+    const partner = await Partner.findOne({ _id: finalPartnerId, ...req.tenantFilter });
     if (!partner) {
       return res.status(404).json({
         success: false,
@@ -279,7 +234,8 @@ router.post('/conversations', authenticate, async (req, res) => {
     let conversation = await Conversation.findOne({
       partnerId: finalPartnerId,
       userId: finalUserId,
-      status: { $in: ['pending', 'accepted', 'active'] }
+      status: { $in: ['pending', 'accepted', 'active'] },
+      ...req.tenantFilter
     });
 
     if (conversation) {
@@ -336,7 +292,8 @@ router.get('/partner/requests', authenticate, async (req, res) => {
     const requests = await Conversation.find({
       partnerId: partnerObjectId,
       status: 'pending',
-      isAcceptedByPartner: false
+      isAcceptedByPartner: false,
+      ...req.tenantFilter
     })
       .sort({ createdAt: -1 })
       .populate('userId', 'email profile profileImage')
@@ -490,8 +447,8 @@ router.get('/conversations', authenticate, async (req, res) => {
   try {
     const isPartner = req.userType === 'partner';
     const query = isPartner
-      ? { partnerId: req.userId, status: { $in: ['accepted', 'active', 'ended'] } }
-      : { userId: req.userId, status: { $in: ['accepted', 'active', 'pending', 'ended'] } };
+      ? { partnerId: req.userId, status: { $in: ['accepted', 'active', 'ended'] }, ...req.tenantFilter }
+      : { userId: req.userId, status: { $in: ['accepted', 'active', 'pending', 'ended'] }, ...req.tenantFilter };
 
     const conversations = await Conversation.find(query)
       .sort({ lastMessageAt: -1 })
@@ -575,7 +532,7 @@ router.get('/conversations/:conversationId/messages', authenticate, async (req, 
     const { conversationId } = req.params;
     const { page = 1, limit = 50 } = req.query;
 
-    const conversation = await Conversation.findOne({ conversationId });
+    const conversation = await Conversation.findOne({ conversationId, ...req.tenantFilter });
 
     if (!conversation) {
       return res.status(404).json({
@@ -605,7 +562,7 @@ router.get('/conversations/:conversationId/messages', authenticate, async (req, 
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    const messages = await Message.find({ conversationId, isDeleted: false })
+    const messages = await Message.find({ conversationId, isDeleted: false, ...req.tenantFilter })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))

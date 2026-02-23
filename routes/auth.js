@@ -7,13 +7,24 @@ const router = express.Router();
 // Register - User self-registration
 router.post('/register/user', async (req, res) => {
   try {
-    const { email, password, profile } = req.body;
+    const { email, password, profile, clientId } = req.body;
 
     // Validate required fields
-    if (!email || !password) {
+    if (!email || !password || !clientId) {
       return res.status(400).json({
         success: false,
-        message: 'Email and password are required'
+        message: 'Email, password, and Client ID are required'
+      });
+    }
+
+    // Check if client exists
+    const Client = (await import('../models/Client.js')).default;
+    const clientDoc = await Client.findOne({ clientId: clientId.toString().toUpperCase() });
+
+    if (!clientDoc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Invalid Client ID. Please check and try again.'
       });
     }
 
@@ -32,6 +43,7 @@ router.post('/register/user', async (req, res) => {
       password,
       role: 'user',
       profile: profile || {},
+      clientId: clientDoc._id,
       loginApproved: false // Requires super admin approval
     });
 
@@ -250,13 +262,31 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Generate presigned URL for profile image if exists
+    let profileImageUrl = null;
+    if (user.profileImage && !user.profileImage.startsWith('http')) {
+      try {
+        const { getobject } = await import('../utils/s3.js');
+        profileImageUrl = await getobject(user.profileImage);
+      } catch (error) {
+        console.error('Error generating profile image URL during login:', error);
+      }
+    } else if (user.profileImage && user.profileImage.startsWith('http')) {
+      profileImageUrl = user.profileImage;
+    }
+
+    const userData = user.toObject();
+    if (profileImageUrl) {
+      userData.profileImageUrl = profileImageUrl;
+    }
+
     const token = generateToken(user._id);
 
     res.json({
       success: true,
       message: 'Login successful',
       data: {
-        user,
+        user: userData,
         token
       }
     });
@@ -271,10 +301,34 @@ router.post('/login', async (req, res) => {
 // Get current user
 router.get('/me', authenticate, async (req, res) => {
   try {
+    let user = req.user;
+
+    // Convert to plain object if it's a Mongoose document
+    if (user.toObject) {
+      user = user.toObject();
+    }
+
+    // Generate presigned URL for profile image if exists
+    let profileImageUrl = null;
+    if (user.profileImage && !user.profileImage.startsWith('http')) {
+      try {
+        const { getobject } = await import('../utils/s3.js');
+        profileImageUrl = await getobject(user.profileImage);
+      } catch (error) {
+        console.error('Error generating profile image URL in /me:', error);
+      }
+    } else if (user.profileImage && user.profileImage.startsWith('http')) {
+      profileImageUrl = user.profileImage;
+    }
+
+    if (profileImageUrl) {
+      user.profileImageUrl = profileImageUrl;
+    }
+
     res.json({
       success: true,
       data: {
-        user: req.user
+        user
       }
     });
   } catch (error) {

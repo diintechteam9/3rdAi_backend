@@ -1,29 +1,9 @@
-# Node.js
 node_modules/
-
-# Environment variables
 .env
-
-# Logs
 *.log
-backend_error.log
-error.log
-output.log
-output2.log
-
-# Debug and Output text files
-*.txt
 debug.txt
 debug_err.txt
 output.txt
-
-# OS Files
+output*.log
+dist/
 .DS_Store
-Thumbs.db
-
-# IDE Files
-.vscode/
-.idea/
-
-# Local data (if any)
-uploads/

@@ -1,7 +1,8 @@
 import express from 'express';
 import Chat from '../../models/Chat.js';
 import { authenticate } from '../../middleware/auth.js';
-import { getChatCompletion } from '../../utils/openai.js';
+import { getGeminiChatCompletion, getAiProvider } from '../../utils/gemini.js';
+import { getChatCompletionFromDb } from '../../utils/openai.js';
 import { getPromptContent, PROMPT_KEYS } from '../../services/promptService.js';
 
 const router = express.Router();
@@ -24,9 +25,9 @@ router.get('/debug', authenticate, async (req, res) => {
       userObjectKeys: req.user ? Object.keys(req.user) : [],
       timestamp: new Date().toISOString()
     };
-    
+
     console.log('[Chat Debug]', debugInfo);
-    
+
     res.json({
       success: true,
       message: 'Debug information',
@@ -51,7 +52,7 @@ router.post('/', authenticate, async (req, res) => {
   try {
     // CRITICAL: This endpoint is ONLY for 'user' role
     const tokenRole = req.decodedRole;
-    
+
     if (tokenRole !== 'user') {
       console.error('[Chat POST] Access denied - Wrong role:', {
         tokenRole: tokenRole,
@@ -78,6 +79,7 @@ router.post('/', authenticate, async (req, res) => {
 
     const chat = new Chat({
       userId: req.user._id,
+      clientId: req.clientId || req.user?.clientId || undefined,
       title: title || 'New Chat',
       messages: []
     });
@@ -113,7 +115,7 @@ router.get('/', authenticate, async (req, res) => {
     // Get role from token (source of truth)
     const tokenRole = req.decodedRole;
     const userRole = req.user?.role;
-    
+
     // Debug logging
     console.log('[Chat GET] Request received:', {
       hasUser: !!req.user,
@@ -160,7 +162,7 @@ router.get('/', authenticate, async (req, res) => {
 
     console.log('[Chat GET] Access granted, fetching chats for user:', req.user._id);
 
-    const chats = await Chat.find({ userId: req.user._id })
+    const chats = await Chat.find({ userId: req.user._id, ...req.tenantFilter })
       .select('_id title messages createdAt updatedAt')
       .sort({ updatedAt: -1 })
       .lean();
@@ -170,7 +172,7 @@ router.get('/', authenticate, async (req, res) => {
       chatId: chat._id,
       title: chat.title,
       messageCount: chat.messages.length,
-      lastMessage: chat.messages.length > 0 
+      lastMessage: chat.messages.length > 0
         ? chat.messages[chat.messages.length - 1].content.substring(0, 100)
         : null,
       createdAt: chat.createdAt,
@@ -201,7 +203,7 @@ router.get('/:chatId', authenticate, async (req, res) => {
   try {
     // CRITICAL: This endpoint is ONLY for 'user' role
     const tokenRole = req.decodedRole;
-    
+
     if (tokenRole !== 'user') {
       console.error('[Chat GET :chatId] Access denied - Wrong role:', {
         tokenRole: tokenRole,
@@ -228,7 +230,8 @@ router.get('/:chatId', authenticate, async (req, res) => {
 
     const chat = await Chat.findOne({
       _id: chatId,
-      userId: req.user._id
+      userId: req.user._id,
+      ...req.tenantFilter
     });
 
     if (!chat) {
@@ -267,7 +270,7 @@ router.post('/:chatId/message', authenticate, async (req, res) => {
   try {
     // CRITICAL: This endpoint is ONLY for 'user' role
     const tokenRole = req.decodedRole;
-    
+
     if (tokenRole !== 'user') {
       console.error('[Chat POST :chatId/message] Access denied - Wrong role:', {
         tokenRole: tokenRole,
@@ -303,14 +306,17 @@ router.post('/:chatId/message', authenticate, async (req, res) => {
     // Find or create chat
     let chat = await Chat.findOne({
       _id: chatId,
-      userId: req.user._id
+      userId: req.user._id,
+      ...req.tenantFilter
     });
 
     // If chatId provided but not found, create new chat
+    const resolvedClientId = req.clientId || req.user?.clientId || undefined;
     if (!chat && chatId !== 'new') {
       // Create new chat if chatId doesn't exist
       chat = new Chat({
         userId: req.user._id,
+        clientId: resolvedClientId,
         title: message.substring(0, 50) || 'New Chat',
         messages: []
       });
@@ -318,6 +324,7 @@ router.post('/:chatId/message', authenticate, async (req, res) => {
       // Create new chat if chatId is 'new'
       chat = new Chat({
         userId: req.user._id,
+        clientId: resolvedClientId,
         title: message.substring(0, 50) || 'New Chat',
         messages: []
       });
@@ -329,7 +336,7 @@ router.post('/:chatId/message', authenticate, async (req, res) => {
       content: message.trim()
     });
 
-    let systemPrompt = 'You are Brahmakosh, a warm and empathetic spiritual wellness guide. Offer concise, actionable guidance rooted in mindfulness and positive habits.';
+    let systemPrompt = 'You are 3rdAI, a warm and empathetic spiritual wellness guide. Offer concise, actionable guidance rooted in mindfulness and positive habits.';
     try {
       const storedPrompt = await getPromptContent(PROMPT_KEYS.MOBILE_CHAT_ASSISTANT);
       if (storedPrompt && typeof storedPrompt === 'string' && storedPrompt.trim().length > 0) {
@@ -348,8 +355,23 @@ router.post('/:chatId/message', authenticate, async (req, res) => {
       }))
     ];
 
-    // Get response from OpenAI
-    const aiResponse = await getChatCompletion(openaiMessages);
+    // Determine which AI provider to use from admin settings
+    const aiProvider = await getAiProvider();
+    console.log('[Chat] Using AI provider:', aiProvider);
+
+    let aiResponse;
+    if (aiProvider === 'openai') {
+      aiResponse = await getChatCompletionFromDb(openaiMessages, {}, req.clientId || req.user?.clientId || null);
+    } else {
+      aiResponse = await getGeminiChatCompletion(openaiMessages, {}, req.clientId || req.user?.clientId || null);
+    }
+
+    if (!aiResponse.success) {
+      return res.status(503).json({
+        success: false,
+        message: `AI service unavailable. Please configure ${aiProvider === 'openai' ? 'OpenAI' : 'Gemini'} API key in Admin → Tools page.`
+      });
+    }
 
     // Add assistant message
     chat.messages.push({
@@ -398,7 +420,7 @@ router.delete('/:chatId', authenticate, async (req, res) => {
   try {
     // CRITICAL: This endpoint is ONLY for 'user' role
     const tokenRole = req.decodedRole;
-    
+
     if (tokenRole !== 'user') {
       console.error('[Chat DELETE :chatId] Access denied - Wrong role:', {
         tokenRole: tokenRole,
@@ -425,7 +447,8 @@ router.delete('/:chatId', authenticate, async (req, res) => {
 
     const chat = await Chat.findOneAndDelete({
       _id: chatId,
-      userId: req.user._id
+      userId: req.user._id,
+      ...req.tenantFilter
     });
 
     if (!chat) {

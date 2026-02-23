@@ -8,30 +8,23 @@ import { authenticate } from '../../middleware/auth.js';
 
 const router = express.Router();
 
-const resolveClientObjectId = async (candidate) => {
-  if (!candidate) return null;
-  if (mongoose.Types.ObjectId.isValid(candidate)) return candidate;
-  const client = await Client.findOne({ clientId: candidate }).select('_id');
-  return client?._id || null;
+// Helper function to extract clientId from request (supports both client and user tokens)
+const getClientId = (req) => {
+  return req.clientId;
 };
 
 const withClientIdString = (doc) => {
   if (!doc) return doc;
   const obj = doc.toObject ? doc.toObject() : doc;
-  
   if (obj.clientId && typeof obj.clientId === 'object') {
     if (obj.clientId.clientId) {
       return { ...obj, clientId: obj.clientId.clientId };
     }
-    console.warn('Client document missing clientId field:', obj.clientId._id);
-    return { ...obj, clientId: null };
   }
-  
   return obj;
 };
 
 // Backward-compatible shape for existing "experts" frontend.
-// Under the hood we store data in Partner collection.
 const toExpertShape = (doc) => {
   const obj = withClientIdString(doc);
   const expertiseStr = Array.isArray(obj.expertise) ? obj.expertise.join(', ') : (obj.expertise || '');
@@ -39,7 +32,6 @@ const toExpertShape = (doc) => {
   const statusStr = obj.onlineStatus || obj.status || 'offline';
   return {
     ...obj,
-    // aliases expected by existing UI
     profileSummary: obj.profileSummary ?? obj.bio ?? '',
     profilePhoto: obj.profilePhoto ?? obj.profilePicture ?? null,
     profilePhotoKey: obj.profilePhotoKey ?? obj.profilePictureKey ?? null,
@@ -50,25 +42,8 @@ const toExpertShape = (doc) => {
   };
 };
 
-const getClientId = async (req) => {
-  if (req.user.role === 'user') {
-    const rawClientId = req.decodedClientId || req.user.clientId?._id || req.user.clientId || req.user.tokenClientId || req.user.clientId?.clientId;
-    const clientId = await resolveClientObjectId(rawClientId);
-    if (!clientId) {
-      throw new Error('Client ID not found for user token. Please ensure your token includes clientId.');
-    }
-    return clientId;
-  }
-  const rawClientId = req.user._id || req.user.id || req.user.clientId;
-  const clientId = await resolveClientObjectId(rawClientId);
-  if (!clientId) {
-    throw new Error('Client ID not found. Please login again.');
-  }
-  return clientId;
-};
-
 const storage = multer.memoryStorage();
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
@@ -83,21 +58,11 @@ const upload = multer({
 // GET all experts
 router.get('/', authenticate, async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
-    const query = { clientId: clientId, isDeleted: false };
+    const query = { ...req.tenantFilter, isDeleted: false };
     if (req.query.includeInactive !== 'true') {
       query.isActive = true;
     }
-    
+
     // Add category filter if provided (support both 'category' and 'categoryId' parameters)
     const categoryParam = req.query.categoryId || req.query.category;
     if (categoryParam) {
@@ -114,18 +79,18 @@ router.get('/', authenticate, async (req, res) => {
         });
       }
     }
-    
+
     // Debug logging
     console.log('Query parameters:', req.query);
     console.log('Category parameter used:', categoryParam);
     console.log('Final MongoDB query:', query);
-    
+
     const experts = await Partner.find(query)
       .populate('clientId', 'clientId')
       .sort({ createdAt: -1 });
-    
+
     console.log(`Found ${experts.length} experts matching query`);
-    
+
     const expertsWithUrls = await Promise.all(
       experts.map(async (expert) => {
         const expertObj = withClientIdString(expert);
@@ -153,7 +118,7 @@ router.get('/', authenticate, async (req, res) => {
         return toExpertShape(expertObj);
       })
     );
-    
+
     res.json({ success: true, data: expertsWithUrls, count: expertsWithUrls.length });
   } catch (error) {
     console.error('Get experts error:', error);
@@ -164,28 +129,17 @@ router.get('/', authenticate, async (req, res) => {
 // GET single expert
 router.get('/:id', authenticate, async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
+    const query = { _id: req.params.id, ...req.tenantFilter, isDeleted: false };
+    if (req.query.includeInactive !== 'true' && req.user.role !== 'super_admin') {
+      query.isActive = true;
     }
-    
-    const expert = await Partner.findOne({
-      _id: req.params.id,
-      clientId: clientId,
-      isDeleted: false,
-      isActive: true
-    }).populate('clientId', 'clientId');
-    
+    const expert = await Partner.findOne(query).populate('clientId', 'clientId');
+
     if (!expert) {
       return res.status(404).json({ success: false, message: 'Expert not found' });
     }
-    
-    const expertObj = withClientIdString(expert);
+
+    const expertObj = expert.toObject();
     if (expertObj.profilePictureKey || expertObj.profilePicture) {
       try {
         const imageKey = expertObj.profilePictureKey || extractS3KeyFromUrl(expertObj.profilePicture);
@@ -206,7 +160,7 @@ router.get('/:id', authenticate, async (req, res) => {
         console.error('Error generating banner presigned URL:', error);
       }
     }
-    
+
     res.json({ success: true, data: toExpertShape(expertObj) });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -217,28 +171,23 @@ router.get('/:id', authenticate, async (req, res) => {
 router.post('/', authenticate, async (req, res) => {
   try {
     const { name, email, password, phone, experience, expertise, profileSummary, languages, customLanguage, chatCharge, voiceCharge, videoCharge, status, categoryId } = req.body;
-    
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
+    const clientId = req.clientId;
+
+    if (req.user.role !== 'client' && req.user.role !== 'super_admin' && !clientId) {
+      return res.status(403).json({ success: false, message: 'Client context required.' });
     }
-    
+
     if (!['client', 'user'].includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Client or user role required.'
       });
     }
-    
+
     if (!name || !email || !password || !experience || !expertise || !profileSummary) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Missing required fields: name, email, password, experience, expertise, profileSummary are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields: name, email, password, experience, expertise, profileSummary are required'
       });
     }
 
@@ -252,8 +201,8 @@ router.post('/', authenticate, async (req, res) => {
 
     const onlineStatus =
       status === 'online' ? 'online' :
-      status === 'busy' || status === 'queue' ? 'busy' :
-      'offline';
+        status === 'busy' || status === 'queue' ? 'busy' :
+          'offline';
 
     const newPartner = new Partner({
       name,
@@ -289,16 +238,8 @@ router.post('/', authenticate, async (req, res) => {
 // Upload profile photo
 router.post('/:id/upload-profile-photo', authenticate, upload.single('profilePhoto'), async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
+    const clientId = req.clientId;
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -308,11 +249,10 @@ router.post('/:id/upload-profile-photo', authenticate, upload.single('profilePho
 
     const expert = await Partner.findOne({
       _id: req.params.id,
-      clientId: clientId,
-      isDeleted: false,
-      isActive: true
+      ...req.tenantFilter,
+      isDeleted: false
     }).populate('clientId', 'clientId');
-    
+
     if (!expert) {
       return res.status(404).json({
         success: false,
@@ -348,16 +288,8 @@ router.post('/:id/upload-profile-photo', authenticate, upload.single('profilePho
 // Upload background banner
 router.post('/:id/upload-banner', authenticate, upload.single('backgroundBanner'), async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
+    const clientId = req.clientId;
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -367,11 +299,10 @@ router.post('/:id/upload-banner', authenticate, upload.single('backgroundBanner'
 
     const expert = await Partner.findOne({
       _id: req.params.id,
-      clientId: clientId,
-      isDeleted: false,
-      isActive: true
+      ...req.tenantFilter,
+      isDeleted: false
     }).populate('clientId', 'clientId');
-    
+
     if (!expert) {
       return res.status(404).json({
         success: false,
@@ -408,36 +339,27 @@ router.post('/:id/upload-banner', authenticate, upload.single('backgroundBanner'
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const { name, email, password, phone, experience, expertise, profileSummary, languages, customLanguage, chatCharge, voiceCharge, videoCharge, status, isActive, categoryId } = req.body;
-    
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
+    const clientId = req.clientId;
+
     if (!['client', 'user'].includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Client or user role required.'
       });
     }
-    
+
     const expert = await Partner.findOne({
       _id: req.params.id,
-      clientId: clientId,
+      ...req.tenantFilter,
       isDeleted: false
     });
-    
+
     if (!expert) {
       return res.status(404).json({ success: false, message: 'Expert not found' });
     }
-    
+
     const updateData = {};
-    
+
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
     if (password !== undefined && password) updateData.password = password;
@@ -469,26 +391,26 @@ router.put('/:id', authenticate, async (req, res) => {
     if (status !== undefined && status !== null && status !== '') {
       updateData.onlineStatus =
         status === 'online' ? 'online' :
-        status === 'busy' || status === 'queue' ? 'busy' :
-        'offline';
+          status === 'busy' || status === 'queue' ? 'busy' :
+            'offline';
     }
     if (isActive !== undefined) updateData.isActive = Boolean(isActive);
     if (categoryId !== undefined) updateData.categoryId = categoryId || null;
-    
+
     const updatedExpert = await Partner.findOneAndUpdate(
       {
         _id: req.params.id,
-        clientId: clientId,
+        ...req.tenantFilter,
         isDeleted: false
       },
       updateData,
       { new: true, runValidators: false }
     ).populate('clientId', 'clientId');
-    
+
     if (!updatedExpert) {
       return res.status(404).json({ success: false, message: 'Expert not found' });
     }
-    
+
     res.json({ success: true, data: toExpertShape(updatedExpert) });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -498,36 +420,28 @@ router.put('/:id', authenticate, async (req, res) => {
 // DELETE expert (soft delete)
 router.delete('/:id', authenticate, async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
+    const clientId = req.clientId;
+
     if (!['client', 'user'].includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Client or user role required.'
       });
     }
-    
+
     const expert = await Partner.findOne({
       _id: req.params.id,
-      clientId: clientId,
+      ...req.tenantFilter,
       isDeleted: false
     });
-    
+
     if (!expert) {
       return res.status(404).json({ success: false, message: 'Expert not found' });
     }
-    
+
     expert.isDeleted = true;
     await expert.save();
-    
+
     res.json({ success: true, message: 'Expert deleted successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -537,38 +451,30 @@ router.delete('/:id', authenticate, async (req, res) => {
 // TOGGLE enable/disable (isActive)
 router.patch('/:id/toggle', authenticate, async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
+    const clientId = req.clientId;
+
     if (!['client', 'user'].includes(req.user.role)) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. Client or user role required.'
       });
     }
-    
+
     const expert = await Partner.findOne({
       _id: req.params.id,
-      clientId: clientId,
+      ...req.tenantFilter,
       isDeleted: false
     }).populate('clientId', 'clientId');
-    
+
     if (!expert) {
       return res.status(404).json({ success: false, message: 'Expert not found' });
     }
-    
+
     expert.isActive = !expert.isActive;
     const updatedExpert = await expert.save();
-    
-    res.json({ 
-      success: true, 
+
+    res.json({
+      success: true,
       data: toExpertShape(updatedExpert),
       message: `Expert ${updatedExpert.isActive ? 'enabled' : 'disabled'} successfully`
     });

@@ -34,6 +34,8 @@ import brandAssetRoutes from './routes/brandAssets/index.js';
 import sponsorRoutes from './routes/sponsors.js';
 
 import notificationRoutes from './routes/notifications.js';
+import expertCategoryRoutes from './routes/expertCategories/index.js';
+import publicRoutes from './routes/public.js';
 
 // ============ NEW: Import Chat Routes ============
 import partnerUserChatRoutes from './routes/chatRoutes.js';
@@ -138,6 +140,8 @@ app.use('/api/founder-messages', founderMessageRoutes);
 app.use('/api/brand-assets', brandAssetRoutes);
 
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/expert-categories', expertCategoryRoutes);
+app.use('/api/public', publicRoutes);
 
 
 // Health check

@@ -8,7 +8,18 @@ const router = express.Router();
 
 router.post('/google', async (req, res) => {
   try {
-    const { idToken } = req.body;
+    const { idToken, clientId: clientCode } = req.body;
+
+    if (!clientCode) {
+      return res.status(400).json({ success: false, message: 'Client ID is required' });
+    }
+
+    const Client = (await import('../../models/Client.js')).default;
+    const clientDoc = await Client.findOne({ clientId: clientCode.toUpperCase() });
+
+    if (!clientDoc) {
+      return res.status(404).json({ success: false, message: 'Invalid Client ID' });
+    }
 
     // Log for debugging
     console.log('Google auth request - has idToken:', !!idToken);
@@ -56,8 +67,8 @@ router.post('/google', async (req, res) => {
       });
     }
 
-    // Find or create user
-    let user = await User.findOne({ email: verifiedEmail });
+    // Find or create user for this specific client
+    let user = await User.findOne({ email: verifiedEmail, clientId: clientDoc._id });
 
     if (!user) {
       // Create new user for Google sign-up
@@ -70,7 +81,8 @@ router.post('/google', async (req, res) => {
         loginApproved: true,
         isActive: true,
         registrationStep: 1, // Email verified, but need mobile and profile
-        mobileVerified: false
+        mobileVerified: false,
+        clientId: clientDoc._id
       });
       await user.save();
       console.log('New Google user created:', verifiedEmail);
@@ -193,16 +205,23 @@ router.post('/login', async (req, res) => {
 // User Registration
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, profile } = req.body;
+    const { email, password, profile, clientId: clientCode } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password || !clientCode) {
       return res.status(400).json({
         success: false,
-        message: 'Email and password are required'
+        message: 'Email, password, and Client ID are required'
       });
     }
 
-    const existingUser = await User.findOne({ email });
+    const Client = (await import('../../models/Client.js')).default;
+    const clientDoc = await Client.findOne({ clientId: clientCode.toUpperCase() });
+
+    if (!clientDoc) {
+      return res.status(404).json({ success: false, message: 'Invalid Client ID' });
+    }
+
+    const existingUser = await User.findOne({ email, clientId: clientDoc._id });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -214,7 +233,7 @@ router.post('/register', async (req, res) => {
       email,
       password,
       profile: profile || {},
-
+      clientId: clientDoc._id,
     });
 
     await user.save();

@@ -1,24 +1,21 @@
 import ExpertCategory from '../../models/ExpertCategory.js';
-import { getClientIdFromToken } from '../../utils/auth.js';
+// Use regular authenticate middleware now
 import { getobject, extractS3KeyFromUrl } from '../../utils/s3.js';
 
 // Create Expert Category
 export const createExpertCategory = async (req, res) => {
   try {
     const { name, description } = req.body;
-    const clientId = await getClientIdFromToken(req);
+    const clientId = req.clientId;
 
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized access'
-      });
+    if (!clientId && req.user.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Client context required.' });
     }
 
     // Check if category with same name exists for this client
     const existingCategory = await ExpertCategory.findOne({
       name: { $regex: new RegExp(`^${name}$`, 'i') },
-      clientId,
+      ...req.tenantFilter,
       isDeleted: false
     });
 
@@ -53,28 +50,18 @@ export const createExpertCategory = async (req, res) => {
 // Get All Expert Categories
 export const getAllExpertCategories = async (req, res) => {
   try {
-    const clientId = await getClientIdFromToken(req);
-    console.log('Debug - getAllExpertCategories clientId:', clientId);
-
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized access'
-      });
-    }
-
     const categories = await ExpertCategory.find({
-      clientId,
+      ...req.tenantFilter,
       isDeleted: false
     }).sort({ createdAt: -1 });
-    
+
     console.log('Debug - Found categories:', categories.length, 'for clientId:', clientId);
 
     // Generate presigned URLs for images
     const categoriesWithPresignedUrls = await Promise.all(
       categories.map(async (category) => {
         const categoryObj = category.toObject();
-        
+
         // Generate presigned URL for image
         if (categoryObj.imageKey || categoryObj.image) {
           try {
@@ -86,7 +73,7 @@ export const getAllExpertCategories = async (req, res) => {
             console.error('Error generating image presigned URL:', error);
           }
         }
-        
+
         return categoryObj;
       })
     );
@@ -112,18 +99,9 @@ export const getAllExpertCategories = async (req, res) => {
 export const getExpertCategoryById = async (req, res) => {
   try {
     const { id } = req.params;
-    const clientId = await getClientIdFromToken(req);
-
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized access'
-      });
-    }
-
     const category = await ExpertCategory.findOne({
       _id: id,
-      clientId,
+      ...req.tenantFilter,
       isDeleted: false
     });
 
@@ -135,7 +113,7 @@ export const getExpertCategoryById = async (req, res) => {
     }
 
     const categoryObj = category.toObject();
-    
+
     // Generate presigned URLs for images
     if (categoryObj.imageKey || categoryObj.image) {
       try {
@@ -177,19 +155,10 @@ export const updateExpertCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description } = req.body;
-    const clientId = await getClientIdFromToken(req);
-
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized access'
-      });
-    }
-
     // Check if category exists
     const category = await ExpertCategory.findOne({
       _id: id,
-      clientId,
+      ...req.tenantFilter,
       isDeleted: false
     });
 
@@ -204,7 +173,7 @@ export const updateExpertCategory = async (req, res) => {
     if (name && name !== category.name) {
       const existingCategory = await ExpertCategory.findOne({
         name: { $regex: new RegExp(`^${name}$`, 'i') },
-        clientId,
+        ...req.tenantFilter,
         isDeleted: false,
         _id: { $ne: id }
       });
@@ -240,18 +209,9 @@ export const updateExpertCategory = async (req, res) => {
 export const deleteExpertCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const clientId = await getClientIdFromToken(req);
-
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized access'
-      });
-    }
-
     const category = await ExpertCategory.findOne({
       _id: id,
-      clientId,
+      ...req.tenantFilter,
       isDeleted: false
     });
 
@@ -283,18 +243,9 @@ export const deleteExpertCategory = async (req, res) => {
 export const toggleExpertCategoryStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const clientId = await getClientIdFromToken(req);
-
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized access'
-      });
-    }
-
     const category = await ExpertCategory.findOne({
       _id: id,
-      clientId,
+      ...req.tenantFilter,
       isDeleted: false
     });
 

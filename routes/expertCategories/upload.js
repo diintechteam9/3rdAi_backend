@@ -24,13 +24,10 @@ export const upload = multer({
 export const uploadCategoryImage = async (req, res) => {
   try {
     const { categoryId } = req.params;
-    const clientId = await getClientIdFromToken(req);
+    const clientId = req.clientId;
 
-    if (!clientId) {
-      return res.status(401).json({
-        success: false,
-        error: 'Unauthorized access'
-      });
+    if (!clientId && req.user.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Client context required.' });
     }
 
     if (!req.file) {
@@ -43,7 +40,7 @@ export const uploadCategoryImage = async (req, res) => {
     // Find the category
     const category = await ExpertCategory.findOne({
       _id: categoryId,
-      clientId,
+      ...req.tenantFilter,
       isDeleted: false
     });
 

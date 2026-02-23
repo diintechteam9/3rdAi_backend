@@ -26,6 +26,12 @@ const messageSchema = new mongoose.Schema({
     required: true,
     enum: ['User', 'Partner']
   },
+  clientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client',
+    required: true,
+    index: true
+  },
   messageType: {
     type: String,
     enum: ['text', 'image', 'audio', 'video', 'file'],

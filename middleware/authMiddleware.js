@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import Admin from '../models/Admin.js';
 import Client from '../models/Client.js';
 import User from '../models/User.js';
+import Partner from '../models/Partner.js';
 
 export const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production-to-a-strong-random-string';
 
@@ -16,23 +17,23 @@ export const authenticate = async (req, res, next) => {
   try {
     // Extract token from Authorization header
     const authHeader = req.header('Authorization') || req.headers.authorization;
-    
+
     if (!authHeader) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'No authorization header provided. Authentication required.' 
+      return res.status(401).json({
+        success: false,
+        message: 'No authorization header provided. Authentication required.'
       });
     }
 
     // Handle both "Bearer token" and just "token" formats
-    const token = authHeader.startsWith('Bearer ') 
-      ? authHeader.replace('Bearer ', '') 
+    const token = authHeader.startsWith('Bearer ')
+      ? authHeader.replace('Bearer ', '')
       : authHeader;
-    
+
     if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'No token provided. Authentication required.' 
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided. Authentication required.'
       });
     }
 
@@ -85,18 +86,18 @@ export const authenticate = async (req, res, next) => {
       clientId: decoded.clientId,
       tokenFormat: decoded.userId ? 'old' : 'new'
     });
-    
+
     // Fetch user from appropriate model based on role
     let user = null;
     let userObject = null; // Store the original Mongoose document
-    
+
     if (userRole === 'super_admin' || userRole === 'admin') {
       userObject = await Admin.findById(userId).select('-password');
       if (userObject) {
         user = userObject.toObject ? userObject.toObject() : userObject;
         user.role = userRole; // CRITICAL: Set role from token
       }
-    } 
+    }
     else if (userRole === 'client') {
       userObject = await Client.findById(userId).select('-password');
       if (userObject) {
@@ -114,19 +115,19 @@ export const authenticate = async (req, res, next) => {
           isActive: user.isActive
         });
       }
-    } 
+    }
     else if (userRole === 'user') {
       userObject = await User.findById(userId)
         .select('-password -emailOtp -emailOtpExpiry -mobileOtp -mobileOtpExpiry')
         .populate('clientId', 'clientId businessName email');
-      
+
       if (userObject) {
         // CRITICAL FIX: Convert to plain object FIRST
         user = userObject.toObject ? userObject.toObject() : { ...userObject };
-        
+
         // CRITICAL FIX: Set role as plain string AFTER conversion
         user.role = 'user';
-        
+
         // Add clientId from token for backward compatibility
         if (decoded.clientId) {
           user.tokenClientId = decoded.clientId;
@@ -143,27 +144,40 @@ export const authenticate = async (req, res, next) => {
         });
       }
     }
+    else if (userRole === 'partner') {
+      userObject = await Partner.findById(userId).select('-password');
+      if (userObject) {
+        user = userObject.toObject ? userObject.toObject() : userObject;
+        user.role = 'partner';
+        console.log('[Auth Middleware] Partner user loaded:', {
+          _id: user._id?.toString(),
+          clientId: user.clientId,
+          email: user.email,
+          role: user.role
+        });
+      }
+    }
     else {
       return res.status(401).json({
         success: false,
         message: `Invalid role in token: ${userRole}`
       });
     }
-    
+
     // Check if user exists
     if (!user) {
       console.error('[Auth Middleware] User not found:', { userId, role: userRole });
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not found. Authorization denied.' 
+      return res.status(401).json({
+        success: false,
+        message: 'User not found. Authorization denied.'
       });
     }
 
     // Check if user is active
     if (user.isActive === false) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User account is inactive. Please contact support.' 
+      return res.status(401).json({
+        success: false,
+        message: 'User account is inactive. Please contact support.'
       });
     }
 
@@ -208,15 +222,36 @@ export const authenticate = async (req, res, next) => {
       user.role = String(userRole);
     }
 
+    // Expose isSuperAdmin and clientId for downstream isolation filtering
+    req.isSuperAdmin = userRole === 'super_admin';
+
+    // Determine the relevant clientId for isolation
+    if (userRole === 'super_admin') {
+      req.clientId = null;
+      req.tenantFilter = {};
+    } else if (userRole === 'admin') {
+      req.clientId = null;
+      // Fetch clients managed by this admin to build isolation filter
+      const clients = await Client.find({ adminId: userId }).select('_id');
+      const clientIds = clients.map(c => c._id);
+      req.tenantFilter = { clientId: { $in: clientIds } };
+    } else if (userRole === 'client') {
+      req.clientId = user._id;
+      req.tenantFilter = { clientId: user._id };
+    } else if (userRole === 'user' || userRole === 'partner') {
+      req.clientId = user.clientId?._id || user.clientId || decoded.clientId;
+      req.tenantFilter = { clientId: req.clientId };
+    }
+
     // Attach user to request
     req.user = user;
-    
+
     next();
 
   } catch (error) {
     console.error('[Auth Middleware] Unexpected error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Server error during authentication.',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -231,9 +266,9 @@ export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
       console.error('[Auth Middleware] Authorization failed: No user object');
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Authentication required. Please login first.' 
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required. Please login first.'
       });
     }
 
@@ -264,9 +299,9 @@ export const authorize = (...roles) => {
         }))
       });
 
-      return res.status(403).json({ 
-        success: false, 
-        message: `Access denied. Required role(s): ${allowedRoles.join(', ')}. Your role: ${userRole}` 
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. Required role(s): ${allowedRoles.join(', ')}. Your role: ${userRole}`
       });
     }
 
@@ -285,18 +320,18 @@ export const authorize = (...roles) => {
  * Supports both old and new token formats
  */
 export const generateToken = (userId, role, clientId = null, email = null) => {
-  const payload = { 
+  const payload = {
     userId,  // Old format (for backward compatibility)
     id: userId,  // New format
     role: String(role), // CRITICAL: Ensure role is always a string
     email: email || undefined
   };
-  
-  // Add clientId to token for users
-  if (role === 'user' && clientId) {
+
+  // Add clientId to token for users and partners
+  if ((role === 'user' || role === 'partner') && clientId) {
     payload.clientId = clientId;
   }
-  
+
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 };
 

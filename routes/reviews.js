@@ -25,13 +25,14 @@ const upload = multer({
 router.get('/expert/:expertId', authenticate, authorize(['client', 'user']), async (req, res) => {
   try {
     const { expertId } = req.params;
-    
-    const reviews = await Review.find({ 
-      expertId
+
+    const reviews = await Review.find({
+      expertId,
+      ...req.tenantFilter
     })
-    .populate('createdBy', 'clientId')
-    .sort({ createdAt: -1 })
-    .lean();
+      .populate('clientId', 'clientId')
+      .sort({ createdAt: -1 })
+      .lean();
 
     // Generate presigned URLs for review images and format response
     const reviewsWithUrls = await Promise.all(
@@ -48,7 +49,7 @@ router.get('/expert/:expertId', authenticate, authorize(['client', 'user']), asy
             // Keep original URL if presigned fails
           }
         }
-        
+
         // Format clean response
         return {
           id: review._id,
@@ -60,7 +61,7 @@ router.get('/expert/:expertId', authenticate, authorize(['client', 'user']), asy
           description: review.description,
           consultationType: review.consultationType,
           isActive: review.isActive,
-          clientId: review.createdBy?.clientId || null,
+          clientId: review.clientId?.clientId || null,
           createdAt: review.createdAt,
           updatedAt: review.updatedAt
         };
@@ -86,14 +87,12 @@ router.get('/expert/:expertId', authenticate, authorize(['client', 'user']), asy
 router.get('/:reviewId', authenticate, authorize(['client', 'user']), async (req, res) => {
   try {
     const { reviewId } = req.params;
-    const clientId = req.user._id;
-    
-    const review = await Review.findOne({ 
-      _id: reviewId, 
-      createdBy: clientId 
+    const review = await Review.findOne({
+      _id: reviewId,
+      ...req.tenantFilter
     })
-    .populate('createdBy', 'clientId')
-    .lean();
+      .populate('clientId', 'clientId')
+      .lean();
 
     if (!review) {
       return res.status(404).json({
@@ -125,7 +124,7 @@ router.get('/:reviewId', authenticate, authorize(['client', 'user']), async (req
       description: review.description,
       consultationType: review.consultationType,
       isActive: review.isActive,
-      clientId: review.createdBy?.clientId || null,
+      clientId: review.clientId?.clientId || null,
       createdAt: review.createdAt,
       updatedAt: review.updatedAt
     };
@@ -151,7 +150,11 @@ router.post('/expert/:expertId', authenticate, authorize(['client', 'user']), as
   try {
     const { expertId } = req.params;
     const { userName, description, rating, consultationType } = req.body;
-    const clientId = req.user._id;
+    const clientId = req.clientId;
+
+    if (!clientId && req.user.role !== 'super_admin') {
+      return res.status(403).json({ success: false, message: 'Client context required.' });
+    }
 
     const review = new Review({
       expertId,
@@ -159,7 +162,8 @@ router.post('/expert/:expertId', authenticate, authorize(['client', 'user']), as
       description,
       rating: parseInt(rating),
       consultationType: consultationType || 'Chat',
-      createdBy: clientId
+      createdBy: req.user._id,
+      clientId: clientId
     });
 
     await review.save();
@@ -184,11 +188,9 @@ router.put('/:reviewId', authenticate, authorize(['client', 'user']), async (req
   try {
     const { reviewId } = req.params;
     const { userName, description, rating, consultationType } = req.body;
-    const clientId = req.user._id;
-
-    const review = await Review.findOne({ 
-      _id: reviewId, 
-      createdBy: clientId 
+    const review = await Review.findOne({
+      _id: reviewId,
+      ...req.tenantFilter
     });
 
     if (!review) {
@@ -224,11 +226,9 @@ router.put('/:reviewId', authenticate, authorize(['client', 'user']), async (req
 router.delete('/:reviewId', authenticate, authorize(['client', 'user']), async (req, res) => {
   try {
     const { reviewId } = req.params;
-    const clientId = req.user._id;
-
-    const review = await Review.findOne({ 
-      _id: reviewId, 
-      createdBy: clientId 
+    const review = await Review.findOne({
+      _id: reviewId,
+      ...req.tenantFilter
     });
 
     if (!review) {
@@ -258,11 +258,9 @@ router.delete('/:reviewId', authenticate, authorize(['client', 'user']), async (
 router.patch('/:reviewId/toggle-status', authenticate, authorize(['client', 'user']), async (req, res) => {
   try {
     const { reviewId } = req.params;
-    const clientId = req.user._id;
-
-    const review = await Review.findOne({ 
-      _id: reviewId, 
-      createdBy: clientId 
+    const review = await Review.findOne({
+      _id: reviewId,
+      ...req.tenantFilter
     });
 
     if (!review) {
@@ -300,7 +298,7 @@ router.post('/:reviewId/upload-image', authenticate, authorize(['client', 'user'
     userRole: req.user?.role,
     userId: req.user?._id
   });
-  
+
   try {
     const { reviewId } = req.params;
     const clientId = req.user._id;
@@ -312,9 +310,9 @@ router.post('/:reviewId/upload-image', authenticate, authorize(['client', 'user'
       });
     }
 
-    const review = await Review.findOne({ 
-      _id: reviewId, 
-      createdBy: clientId 
+    const review = await Review.findOne({
+      _id: reviewId,
+      ...req.tenantFilter
     });
 
     if (!review) {

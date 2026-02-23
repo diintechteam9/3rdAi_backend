@@ -26,7 +26,8 @@ const userSchema = new mongoose.Schema({
   },
   profile: {
     name: String,
-    dob: Date
+    policeStation: String,
+    serviceId: String
   },
   // Live location (current/last known location)
   liveLocation: {
@@ -99,7 +100,8 @@ const userSchema = new mongoose.Schema({
   },
   clientId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Client'
+    ref: 'Client',
+    required: true
   },
   passwordResetToken: {
     type: String,

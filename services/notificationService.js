@@ -6,7 +6,7 @@ const sendEmail = async (to, subject, htmlContent) => {
   if (!process.env.USE_BREVO || !process.env.BREVO_API_KEY) {
     return;
   }
-  
+
   try {
     const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
       sender: { name: process.env.BREVO_FROM_NAME, email: process.env.BREVO_FROM_EMAIL },
@@ -28,7 +28,7 @@ const sendEmail = async (to, subject, htmlContent) => {
 // Twilio SMS Service
 const sendSMS = async (to, message) => {
   if (!process.env.TWILIO_WHATSAPP_ENABLED || !process.env.TWILIO_WHATSAPP_ACCOUNT_SID) return;
-  
+
   try {
     const auth = Buffer.from(`${process.env.TWILIO_WHATSAPP_ACCOUNT_SID}:${process.env.TWILIO_WHATSAPP_AUTH_TOKEN}`).toString('base64');
     await axios.post(
@@ -49,7 +49,7 @@ const sendSMS = async (to, message) => {
 // Twilio WhatsApp Service
 const sendWhatsApp = async (to, message) => {
   if (!process.env.TWILIO_WHATSAPP_ENABLED || !process.env.TWILIO_WHATSAPP_FROM) return;
-  
+
   try {
     const auth = Buffer.from(`${process.env.TWILIO_WHATSAPP_ACCOUNT_SID}:${process.env.TWILIO_WHATSAPP_AUTH_TOKEN}`).toString('base64');
     await axios.post(
@@ -200,9 +200,9 @@ class NotificationService {
         .sort({ createdAt: -1 })
         .limit(limit)
         .skip(skip);
-      
+
       const unreadCount = await Notification.countDocuments({ userId, isRead: false });
-      
+
       return {
         notifications,
         unreadCount
@@ -243,7 +243,7 @@ class NotificationService {
   }
 
   // ============ DREAM REQUEST NOTIFICATIONS ============
-  
+
   // Send dream request received confirmation
   async sendDreamRequestReceived(userEmail, userName, dreamSymbol) {
     try {
@@ -272,7 +272,7 @@ class NotificationService {
             </p>
           </div>
           <div style="text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px;">
-            <p>© ${new Date().getFullYear()} Brahmakosh. All rights reserved.</p>
+            <p>© ${new Date().getFullYear()} 3rdAI. All rights reserved.</p>
           </div>
         </div>
       `;
@@ -311,11 +311,11 @@ class NotificationService {
               <a href="${dreamUrl || 'https://brahmakosh.com/swapna-decoder'}" style="display: inline-block; background: #6366f1; color: white; padding: 12px 30px; text-decoration: none; border-radius: 8px; font-weight: 600;">View Dream Meaning</a>
             </div>
             <p style="margin-top: 30px; color: #6b7280; font-size: 14px;">
-              Thank you for using Brahmakosh Swapna Decoder. We hope this helps you understand your dreams better.
+              Thank you for using 3rdAI Swapna Decoder. We hope this helps you understand your dreams better.
             </p>
           </div>
           <div style="text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px;">
-            <p>© ${new Date().getFullYear()} Brahmakosh. All rights reserved.</p>
+            <p>© ${new Date().getFullYear()} 3rdAI. All rights reserved.</p>
             <p>Decode your dreams with Vedic wisdom</p>
           </div>
         </div>

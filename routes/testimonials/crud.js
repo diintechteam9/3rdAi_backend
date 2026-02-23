@@ -7,63 +7,31 @@ import { getobject, extractS3KeyFromUrl } from '../../utils/s3.js';
 
 const router = express.Router();
 
-const resolveClientObjectId = async (candidate) => {
-  if (!candidate) return null;
-  if (mongoose.Types.ObjectId.isValid(candidate)) return candidate;
-  const client = await Client.findOne({ clientId: candidate }).select('_id');
-  return client?._id || null;
-};
-
 const withClientIdString = (doc) => {
   if (!doc) return doc;
   const obj = doc.toObject ? doc.toObject() : doc;
-  
-  // If clientId is populated with Client document, extract the clientId field
-  if (obj.clientId && typeof obj.clientId === 'object' && obj.clientId.clientId) {
-    return { ...obj, clientId: obj.clientId.clientId };
+  if (obj.clientId && typeof obj.clientId === 'object') {
+    if (obj.clientId.clientId) {
+      return { ...obj, clientId: obj.clientId.clientId };
+    }
   }
-  
-  // If clientId is just an ObjectId, keep it as is (will be handled by populate)
   return obj;
 };
 
 // Helper function to extract clientId from request (supports both client and user tokens)
-const getClientId = async (req) => {
-  if (req.user.role === 'user') {
-    const rawClientId = req.decodedClientId || req.user.clientId?._id || req.user.clientId || req.user.tokenClientId || req.user.clientId?.clientId;
-    const clientId = await resolveClientObjectId(rawClientId);
-    if (!clientId) {
-      throw new Error('Client ID not found for user token. Please ensure your token includes clientId.');
-    }
-    return clientId;
-  }
-  const rawClientId = req.user._id || req.user.id || req.user.clientId;
-  const clientId = await resolveClientObjectId(rawClientId);
-  if (!clientId) {
-    throw new Error('Client ID not found. Please login again.');
-  }
-  return clientId;
+const getClientId = (req) => {
+  return req.clientId;
 };
 
 // GET /api/testimonials - Get all testimonials for authenticated client
 router.get('/', authenticate, async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
     // Build query - exclude deleted items, optionally include inactive items
-    const query = { clientId: clientId, isDeleted: false };
+    const query = { ...req.tenantFilter, isDeleted: false };
     if (req.query.includeInactive !== 'true') {
       query.isActive = true;
     }
-    
+
     const testimonials = await Testimonial.find(query)
       .populate('clientId', 'clientId')
       .sort({ createdAt: -1 });
@@ -72,7 +40,7 @@ router.get('/', authenticate, async (req, res) => {
     const testimonialsWithUrls = await Promise.all(
       testimonials.map(async (testimonial) => {
         const testimonialObj = withClientIdString(testimonial);
-        
+
         // Generate presigned URL for image if exists
         if (testimonialObj.imageKey || testimonialObj.image) {
           try {
@@ -85,7 +53,7 @@ router.get('/', authenticate, async (req, res) => {
             console.error('Error generating image presigned URL:', error);
           }
         }
-        
+
         return testimonialObj;
       })
     );
@@ -108,21 +76,11 @@ router.get('/', authenticate, async (req, res) => {
 // GET /api/testimonials/:id - Get single testimonial
 router.get('/:id', authenticate, async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
+    const query = { _id: req.params.id, ...req.tenantFilter, isDeleted: false };
+    if (req.query.includeInactive !== 'true' && req.user.role !== 'super_admin') {
+      query.isActive = true;
     }
-    const testimonial = await Testimonial.findOne({
-      _id: req.params.id,
-      clientId: clientId,
-      isDeleted: false,
-      isActive: true
-    }).populate('clientId', 'clientId');
+    const testimonial = await Testimonial.findOne(query).populate('clientId', 'clientId');
 
     if (!testimonial) {
       return res.status(404).json({
@@ -167,14 +125,10 @@ router.get('/:id', authenticate, async (req, res) => {
 router.post('/', authenticate, async (req, res) => {
   try {
     const { name, rating, message } = req.body;
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
+    const clientId = req.clientId;
+
+    if (req.user.role !== 'client' && req.user.role !== 'super_admin' && !clientId) {
+      return res.status(403).json({ success: false, message: 'You must be associated with a client to create testimonials.' });
     }
 
     // Validation
@@ -226,15 +180,7 @@ router.post('/', authenticate, async (req, res) => {
 router.put('/:id', authenticate, async (req, res) => {
   try {
     const { name, rating, message } = req.body;
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
+    const { id } = req.params;
 
     // Validation
     if (!name || !rating || !message) {
@@ -253,10 +199,9 @@ router.put('/:id', authenticate, async (req, res) => {
 
     const testimonial = await Testimonial.findOneAndUpdate(
       {
-        _id: req.params.id,
-        clientId: clientId,
-        isDeleted: false,
-        isActive: true
+        _id: id,
+        ...req.tenantFilter,
+        isDeleted: false
       },
       {
         name: name.trim(),
@@ -297,19 +242,10 @@ router.put('/:id', authenticate, async (req, res) => {
 // DELETE /api/testimonials/:id - Delete testimonial (soft delete)
 router.delete('/:id', authenticate, async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
     const testimonial = await Testimonial.findOneAndUpdate(
       {
         _id: req.params.id,
-        clientId: clientId,
+        ...req.tenantFilter,
         isDeleted: false
       },
       { isDeleted: true },
@@ -340,19 +276,9 @@ router.delete('/:id', authenticate, async (req, res) => {
 // PATCH /api/testimonials/:id/toggle - Toggle testimonial status
 router.patch('/:id/toggle', authenticate, async (req, res) => {
   try {
-    let clientId;
-    try {
-      clientId = await getClientId(req);
-    } catch (clientIdError) {
-      return res.status(401).json({
-        success: false,
-        message: clientIdError.message || 'Unable to determine client ID. Please ensure your token is valid.'
-      });
-    }
-    
     const testimonial = await Testimonial.findOne({
       _id: req.params.id,
-      clientId: clientId,
+      ...req.tenantFilter,
       isDeleted: false
     });
 

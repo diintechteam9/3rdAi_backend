@@ -798,12 +798,8 @@ router.post('/register/step2/verify', async (req, res) => {
  *   email (required),
  *   clientId (required),
  *   name (optional),
- *   dob (optional),
- *   timeOfBirth (optional),
- *   placeOfBirth (optional),
- *   latitude (optional),
- *   longitude (optional),
- *   gowthra (optional)
+ *   policeStation (optional),
+ *   serviceId (optional)
  * }
  */
 router.post('/register/step3', async (req, res) => {
@@ -812,7 +808,8 @@ router.post('/register/step3', async (req, res) => {
       email,
       clientId: clientCode,
       name,
-      dob
+      policeStation,
+      serviceId
     } = req.body;
 
     const { mobile } = req.body;
@@ -856,7 +853,8 @@ router.post('/register/step3', async (req, res) => {
     }
 
     if (name) user.profile.name = name;
-    if (dob) user.profile.dob = new Date(dob);
+    if (policeStation) user.profile.policeStation = policeStation;
+    if (serviceId) user.profile.serviceId = serviceId;
 
     // Mark registration as complete
     user.registrationStep = 3;
@@ -949,7 +947,7 @@ router.post('/profile/image', authenticate, upload.single('image'), async (req, 
     const imageKey = `images/user/${user._id}/profile/${uuidv4()}.${fileExtension}`;
 
     const uploadCommand = new PutObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
+      Bucket: process.env.R2_BUCKET,
       Key: imageKey,
       Body: imageFile.buffer,
       ContentType: imageFile.mimetype,
@@ -1156,14 +1154,32 @@ router.post('/login', async (req, res) => {
     // Generate token with user's clientId (ObjectId)
     const token = generateToken(user._id, 'user', user.clientId._id);
 
+    // Generate presigned URL for profile image if exists
+    let profileImageUrl = null;
+    if (user.profileImage && !user.profileImage.startsWith('http')) {
+      try {
+        const { getobject } = await import('../../utils/s3.js');
+        profileImageUrl = await getobject(user.profileImage);
+      } catch (error) {
+        console.error('Error generating profile image URL during login:', error);
+      }
+    } else if (user.profileImage && user.profileImage.startsWith('http')) {
+      profileImageUrl = user.profileImage;
+    }
+
+    const userData = user.toObject();
+    if (profileImageUrl) {
+      userData.profileImageUrl = profileImageUrl;
+    }
+    userData.password = undefined; // Remove password from response
+
     res.json({
       success: true,
       message: 'Login successful',
       data: {
         user: {
-          ...user.toObject(),
-          role: 'user',
-          password: undefined // Remove password from response
+          ...userData,
+          role: 'user'
         },
         token,
         clientId: user.clientId?.clientId || null,

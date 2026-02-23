@@ -8,10 +8,10 @@ const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const EMAIL_ENABLED = process.env.EMAIL_ENABLED === 'true';
 const EMAIL_FROM = process.env.EMAIL_FROM || process.env.BREVO_FROM_EMAIL;
-const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || process.env.APP_NAME || 'Brahmakosh';
+const EMAIL_FROM_NAME = process.env.EMAIL_FROM_NAME || process.env.APP_NAME || '3rdAI';
 
 export const sendEmailOTP = async (email, otp, purpose = 'verification') => {
-  const appName = process.env.APP_NAME || 'Brahmakosh';
+  const appName = process.env.APP_NAME || '3rdAI';
 
   // Log OTP to console in development or if email is disabled
   if (!EMAIL_ENABLED || process.env.NODE_ENV === 'development') {
@@ -35,7 +35,7 @@ export const sendEmailOTP = async (email, otp, purpose = 'verification') => {
   }
 
   let subject, html;
-  
+
   if (purpose === 'password-reset') {
     subject = `${appName} - Password Reset OTP`;
     html = `
@@ -140,8 +140,8 @@ export const sendEmailOTP = async (email, otp, purpose = 'verification') => {
     return { success: true, message: 'OTP sent successfully via Brevo' };
   } catch (error) {
     console.error('❌ Error sending email via Brevo:', error.response?.data || error.message);
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: error.response?.data?.message || error.message || 'Failed to send email'
     };
   }

@@ -5,24 +5,24 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Validate required environment variables
-const requiredEnvVars = ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_REGION', 'AWS_BUCKET_NAME'];
+const requiredEnvVars = ['R2_ACCESS_KEY', 'R2_SECRET_KEY', 'R2_BUCKET', 'R2_ENDPOINT'];
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
 let s3Client;
 
 if (missingEnvVars.length > 0) {
-  console.warn('⚠️  Missing AWS environment variables:', missingEnvVars);
-  console.warn('S3 functionality will be disabled until these are configured.');
-  // Create a dummy client or handle gracefully
+  console.warn('⚠️  Missing R2 environment variables:', missingEnvVars);
+  console.warn('Cloudflare R2 functionality will be disabled until these are configured.');
   s3Client = {
-    send: async () => { throw new Error('S3 not configured'); }
+    send: async () => { throw new Error('R2 not configured'); }
   };
 } else {
   s3Client = new S3Client({
-    region: process.env.AWS_REGION,
+    region: 'auto', // R2 requires 'auto'
+    endpoint: process.env.R2_ENDPOINT,
     credentials: {
-      accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+      accessKeyId: process.env.R2_ACCESS_KEY,
+      secretAccessKey: process.env.R2_SECRET_KEY,
     },
   });
 }
@@ -31,7 +31,7 @@ if (missingEnvVars.length > 0) {
 export const putobject = async (key, contentType) => {
   try {
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
+      Bucket: process.env.R2_BUCKET,
       Key: key,
       ContentType: contentType,
     });
@@ -55,7 +55,7 @@ export const generateUploadUrl = async (fileName, contentType, folder) => {
     const key = folder ? `${folder}/${uniqueFileName}` : uniqueFileName;
 
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
+      Bucket: process.env.R2_BUCKET,
       Key: key,
       ContentType: contentType,
       CacheControl: 'max-age=31536000',
@@ -67,7 +67,11 @@ export const generateUploadUrl = async (fileName, contentType, folder) => {
     });
 
     const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
-    const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+    // For R2, the public URL is either a custom domain or we use the presigned GET URL strategy.
+    // If R2_PUBLIC_URL is provided, we use it, otherwise fallback to endpoint/bucket style.
+    const baseUrl = process.env.R2_PUBLIC_URL || `${process.env.R2_ENDPOINT}/${process.env.R2_BUCKET}`;
+    const fileUrl = `${baseUrl}/${key}`;
 
     return { uploadUrl, fileUrl, key };
   } catch (error) {
@@ -83,11 +87,11 @@ export const getobject = async (key, expiresIn = 604800) => {
     const actualKey = key.startsWith('http') ? extractS3KeyFromUrl(key) : key;
 
     if (!actualKey) {
-      throw new Error('Invalid S3 key provided');
+      throw new Error('Invalid R2 key provided');
     }
 
     const command = new GetObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
+      Bucket: process.env.R2_BUCKET,
       Key: actualKey,
       ResponseContentDisposition: 'inline',
       ResponseContentType: actualKey.match(/\.(mp4|webm|ogg)$/i) ? 'video/mp4' :
@@ -126,10 +130,11 @@ export const getobjectFor = async (bucket, key) => {
 export const getobjectForWithRegion = async (bucket, key, region) => {
   try {
     const regionalClient = new S3Client({
-      region: region || process.env.AWS_REGION,
+      region: 'auto',
+      endpoint: process.env.R2_ENDPOINT,
       credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        accessKeyId: process.env.R2_ACCESS_KEY,
+        secretAccessKey: process.env.R2_SECRET_KEY,
       },
     });
     const command = new GetObjectCommand({
@@ -149,7 +154,7 @@ export const getobjectForWithRegion = async (bucket, key, region) => {
 export const deleteObject = async (key) => {
   try {
     const command = new DeleteObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
+      Bucket: process.env.R2_BUCKET,
       Key: key,
     });
 
@@ -189,12 +194,17 @@ export const extractS3KeyFromUrl = (url) => {
       const key = urlObj.pathname.substring(1);
       return key || null;
     } catch (error) {
-      console.error('Error parsing S3 URL:', error);
+      console.error('Error parsing storage URL:', error);
       // Fallback: try to extract key manually
-      // Pattern: https://bucket.s3.region.amazonaws.com/key or https://bucket.s3.amazonaws.com/key
-      const match = url.match(/s3[.-]([^.]+)\.amazonaws\.com\/(.+)$/);
-      if (match && match[2]) {
-        return decodeURIComponent(match[2]);
+      // This will match an R2 endpoint or S3 endpoint
+      const match = url.match(/(?:s3[.-][^.]+\.amazonaws\.com|r2\.cloudflarestorage\.com)\/(.+)$/);
+      if (match && match[1]) {
+        // Handle bucket name in path for R2 (e.g., /bucket-name/key)
+        const pathParts = match[1].split('/');
+        if (pathParts.length > 1 && pathParts[0] === process.env.R2_BUCKET) {
+          return decodeURIComponent(pathParts.slice(1).join('/'));
+        }
+        return decodeURIComponent(match[1]);
       }
       return null;
     }
@@ -206,7 +216,7 @@ export const extractS3KeyFromUrl = (url) => {
 
 // Upload file directly to S3
 export const uploadToS3 = async (file, folder = '') => {
-  console.log('=== S3 UPLOAD START ===');
+  console.log('=== R2 UPLOAD START ===');
   console.log('File details:', {
     originalname: file.originalname,
     mimetype: file.mimetype,
@@ -214,11 +224,11 @@ export const uploadToS3 = async (file, folder = '') => {
     hasBuffer: !!file.buffer,
     bufferLength: file.buffer?.length
   });
-  console.log('AWS Config:', {
-    region: process.env.AWS_REGION,
-    bucket: process.env.AWS_BUCKET_NAME,
-    hasAccessKey: !!process.env.AWS_ACCESS_KEY_ID,
-    hasSecretKey: !!process.env.AWS_SECRET_ACCESS_KEY
+  console.log('R2 Config:', {
+    region: 'auto',
+    bucket: process.env.R2_BUCKET,
+    hasAccessKey: !!process.env.R2_ACCESS_KEY,
+    hasSecretKey: !!process.env.R2_SECRET_KEY
   });
 
   try {
@@ -227,12 +237,12 @@ export const uploadToS3 = async (file, folder = '') => {
       throw new Error('Invalid file: missing file buffer');
     }
 
-    if (!process.env.AWS_BUCKET_NAME) {
-      throw new Error('AWS_BUCKET_NAME not configured');
+    if (!process.env.R2_BUCKET) {
+      throw new Error('R2_BUCKET not configured');
     }
 
-    if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-      throw new Error('AWS credentials not configured');
+    if (!process.env.R2_ACCESS_KEY || !process.env.R2_SECRET_KEY) {
+      throw new Error('R2 credentials not configured');
     }
 
     // Clean filename - remove spaces and special characters
@@ -242,10 +252,10 @@ export const uploadToS3 = async (file, folder = '') => {
       .toLowerCase();
 
     const key = folder ? `${folder}/${Date.now()}-${cleanFileName}` : `${Date.now()}-${cleanFileName}`;
-    console.log('Generated S3 key:', key);
+    console.log('Generated R2 key:', key);
 
     const command = new PutObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
+      Bucket: process.env.R2_BUCKET,
       Key: key,
       Body: file.buffer,
       ContentType: file.mimetype,
@@ -256,13 +266,14 @@ export const uploadToS3 = async (file, folder = '') => {
         'upload-timestamp': Date.now().toString()
       }
     });
-    console.log('S3 command created, sending...');
+    console.log('R2 command created, sending...');
 
     const result = await s3Client.send(command);
-    console.log('S3 upload result:', result);
+    console.log('R2 upload result:', result);
 
     // Return both key and URL for storage
-    const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    const baseUrl = process.env.R2_PUBLIC_URL || `${process.env.R2_ENDPOINT}/${process.env.R2_BUCKET}`;
+    const fileUrl = `${baseUrl}/${key}`;
     console.log('Generated file URL:', fileUrl);
 
     return {
@@ -271,7 +282,7 @@ export const uploadToS3 = async (file, folder = '') => {
       url: fileUrl
     };
   } catch (error) {
-    console.error('=== S3 UPLOAD ERROR ===');
+    console.error('=== R2 UPLOAD ERROR ===');
     console.error('Error name:', error.name);
     console.error('Error message:', error.message);
     console.error('Error code:', error.code);
@@ -296,16 +307,15 @@ export const deleteFromS3 = async (keyOrUrl) => {
     }
 
     const command = new DeleteObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
+      Bucket: process.env.R2_BUCKET,
       Key: key,
     });
 
     await s3Client.send(command);
   } catch (error) {
-    console.error('Error deleting from S3:', error);
+    console.error('Error deleting from R2:', error);
     throw error;
   }
 };
 
 export { s3Client };
-

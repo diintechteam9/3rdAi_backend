@@ -2,23 +2,27 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import Partner from '../models/Partner.js';
+import { generateToken } from '../middleware/authMiddleware.js';
+import Client from '../models/Client.js';
 const router = express.Router();
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-// Generate JWT Token
-const generateToken = (partnerId) => {
-  return jwt.sign({ partnerId, role: 'partner' }, process.env.JWT_SECRET, {
-    expiresIn: '30d'
-  });
-};
 
 // @route   POST /api/partners/register
 // @desc    Register new partner
 // @access  Public
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, phone, specialization } = req.body;
+    const { name, email, password, phone, specialization, clientId } = req.body;
+
+    if (!clientId) {
+      return res.status(400).json({ success: false, message: 'Client ID is required' });
+    }
+
+    const clientDoc = await Client.findOne({ clientId: clientId.toString().toUpperCase() });
+    if (!clientDoc) {
+      return res.status(404).json({ success: false, message: 'Invalid Client ID' });
+    }
 
     // Check if partner already exists
     const existingPartner = await Partner.findOne({ email });
@@ -35,13 +39,14 @@ router.post('/register', async (req, res) => {
       email,
       password,
       phone,
-      specialization
+      specialization,
+      clientId: clientDoc._id
     });
 
     await partner.save();
 
     // Generate token
-    const token = generateToken(partner._id);
+    const token = generateToken(partner._id, 'partner', clientDoc._id);
 
     res.status(201).json({
       success: true,
@@ -101,7 +106,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Generate token
-    const token = generateToken(partner._id);
+    const token = generateToken(partner._id, 'partner', partner.clientId);
 
     res.json({
       success: true,
@@ -147,8 +152,8 @@ router.post('/google-login', async (req, res) => {
     const { sub: googleId, email, name, picture } = payload;
 
     // Check if partner exists
-    let partner = await Partner.findOne({ 
-      $or: [{ email }, { googleId }] 
+    let partner = await Partner.findOne({
+      $or: [{ email }, { googleId }]
     });
 
     if (partner) {
@@ -178,7 +183,7 @@ router.post('/google-login', async (req, res) => {
     }
 
     // Generate token
-    const token = generateToken(partner._id);
+    const token = generateToken(partner._id, 'partner', partner.clientId);
 
     res.json({
       success: true,

@@ -37,15 +37,15 @@ export const validateOTP = (storedOTP, providedOTP, expiryDate) => {
     console.log(storedOTP, providedOTP);
     return { valid: false, message: 'OTP is required' };
   }
-  
+
   if (isOTPExpired(expiryDate)) {
     return { valid: false, message: 'OTP has expired. Please request a new one.' };
   }
-  
+
   if (storedOTP !== providedOTP) {
     return { valid: false, message: 'Invalid OTP. Please try again.' };
   }
-  
+
   return { valid: true, message: 'OTP is valid' };
 };
 
@@ -56,7 +56,7 @@ export const validateOTP = (storedOTP, providedOTP, expiryDate) => {
 // Create nodemailer transporter
 const createEmailTransporter = () => {
   const emailService = process.env.EMAIL_SERVICE || 'gmail';
-  
+
   const connectionOptions = {
     connectionTimeout: parseInt(process.env.SMTP_CONNECTION_TIMEOUT || '120000'),
     greetingTimeout: parseInt(process.env.SMTP_GREETING_TIMEOUT || '60000'),
@@ -73,7 +73,7 @@ const createEmailTransporter = () => {
   if (emailService.toLowerCase() === 'gmail') {
     const port = parseInt(process.env.SMTP_PORT || '587');
     const useSSL = port === 465 || process.env.SMTP_SECURE === 'true';
-    
+
     return nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: port,
@@ -86,7 +86,7 @@ const createEmailTransporter = () => {
       }
     });
   }
-  
+
   if (emailService.toLowerCase() === 'outlook') {
     return nodemailer.createTransport({
       host: 'smtp-mail.outlook.com',
@@ -99,7 +99,7 @@ const createEmailTransporter = () => {
       }
     });
   }
-  
+
   if (emailService.toLowerCase() === 'yahoo') {
     return nodemailer.createTransport({
       host: 'smtp.mail.yahoo.com',
@@ -112,7 +112,7 @@ const createEmailTransporter = () => {
       }
     });
   }
-  
+
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: parseInt(process.env.SMTP_PORT || '587'),
@@ -129,8 +129,8 @@ const createEmailTransporter = () => {
 const sendEmailViaBrevo = async (email, otp) => {
   const BREVO_API_KEY = process.env.BREVO_API_KEY;
   const BREVO_FROM_EMAIL = process.env.BREVO_FROM_EMAIL || process.env.EMAIL_FROM || process.env.EMAIL_USER;
-  const BREVO_FROM_NAME = process.env.BREVO_FROM_NAME || process.env.APP_NAME || 'Brahmakosh';
-  const appName = process.env.APP_NAME || 'Brahmakosh';
+  const BREVO_FROM_NAME = process.env.BREVO_FROM_NAME || process.env.APP_NAME || '3rdAI';
+  const appName = process.env.APP_NAME || '3rdAI';
 
   if (!BREVO_API_KEY) {
     throw new Error('Brevo API key not configured');
@@ -176,7 +176,7 @@ const sendEmailViaBrevo = async (email, otp) => {
 const sendEmailViaSendGrid = async (email, otp) => {
   const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
   const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || process.env.EMAIL_FROM || process.env.EMAIL_USER;
-  const appName = process.env.APP_NAME || 'Brahmakosh';
+  const appName = process.env.APP_NAME || '3rdAI';
 
   if (!SENDGRID_API_KEY) {
     throw new Error('SendGrid API key not configured');
@@ -225,9 +225,9 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
   const {
     sessionId,
     expiresAt = getOTPExpiry(),
-    client = 'brahmakosh',
+    client = '3rdAI',
   } = options;
-  
+
   try {
     if (process.env.EMAIL_ENABLED !== 'true') {
       console.log(`📧 Email OTP for ${email}: ${otp} (Email service disabled - check console)`);
@@ -238,7 +238,7 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
       try {
         const result = await sendEmailViaBrevo(email, otp);
         console.log(`✅ Email OTP sent via Brevo to ${email}. Message ID: ${result.messageId || 'N/A'}`);
-        
+
         try {
           await OTP.create({
             email,
@@ -251,14 +251,14 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
         } catch (dbError) {
           console.warn('Could not save OTP to database collection (OTP is saved in User model):', dbError.message);
         }
-        
+
         return { success: true, message: 'OTP sent to email via Brevo', messageId: result.messageId };
       } catch (brevoError) {
         if (brevoError.code === 'E11000' || brevoError.message?.includes('duplicate key')) {
           console.warn('Database error saving OTP (email was sent successfully):', brevoError.message);
           return { success: true, message: 'OTP sent to email via Brevo (database save failed but email sent)' };
         }
-        
+
         console.error('Brevo API error:', brevoError.response?.data || brevoError.message);
         console.log('⚠️ Brevo API failed, trying alternatives...');
       }
@@ -268,7 +268,7 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
       try {
         const result = await sendEmailViaSendGrid(email, otp);
         console.log(`✅ Email OTP sent via SendGrid to ${email}`);
-        
+
         try {
           await OTP.create({
             email,
@@ -281,7 +281,7 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
         } catch (dbError) {
           console.warn('Could not save OTP to database collection (OTP is saved in User model):', dbError.message);
         }
-        
+
         return { success: true, message: 'OTP sent to email via SendGrid' };
       } catch (sendGridError) {
         console.error('SendGrid error:', sendGridError.response?.data || sendGridError.message);
@@ -296,7 +296,7 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
     }
 
     const transporter = createEmailTransporter();
-    
+
     if (process.env.SMTP_VERIFY_CONNECTION === 'true') {
       try {
         await transporter.verify();
@@ -305,9 +305,9 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
         console.warn('⚠️ SMTP verification failed, but attempting to send anyway:', verifyError.message);
       }
     }
-    
+
     const emailFrom = process.env.EMAIL_FROM || process.env.EMAIL_USER;
-    const appName = process.env.APP_NAME || 'Brahmakosh';
+    const appName = process.env.APP_NAME || '3rdAI';
 
     const mailOptions = {
       from: `"${appName}" <${emailFrom}>`,
@@ -336,7 +336,7 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
     let currentTransporter = transporter;
     let triedPort465 = false;
     const originalPort = parseInt(process.env.SMTP_PORT || '587');
-    
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         info = await currentTransporter.sendMail(mailOptions);
@@ -345,13 +345,13 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
         }
         break;
       } catch (sendError) {
-        const isTimeoutError = sendError.code === 'ETIMEDOUT' || 
-                               sendError.code === 'ECONNRESET' || 
-                               sendError.code === 'ESOCKETTIMEDOUT' ||
-                               sendError.code === 'ECONNREFUSED' ||
-                               sendError.message?.includes('timeout') ||
-                               sendError.message?.includes('Connection');
-        
+        const isTimeoutError = sendError.code === 'ETIMEDOUT' ||
+          sendError.code === 'ECONNRESET' ||
+          sendError.code === 'ESOCKETTIMEDOUT' ||
+          sendError.code === 'ECONNREFUSED' ||
+          sendError.message?.includes('timeout') ||
+          sendError.message?.includes('Connection');
+
         if (attempt === 1 && isTimeoutError && emailService.toLowerCase() === 'gmail' && originalPort === 587 && !triedPort465) {
           console.warn(`⚠️ Port 587 failed, trying port 465 (SSL) as fallback...`);
           triedPort465 = true;
@@ -378,7 +378,7 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
           });
           continue;
         }
-        
+
         if (attempt < maxRetries && isTimeoutError) {
           const delay = (attempt + 1) * 2000;
           console.warn(`⚠️ Email send attempt ${attempt + 1} failed (${sendError.code || sendError.message}), retrying in ${delay}ms...`);
@@ -394,9 +394,9 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
         }
       }
     }
-    
+
     console.log(`✅ Email OTP sent to ${email}. Message ID: ${info.messageId}`);
-    
+
     try {
       await OTP.create({
         email,
@@ -409,11 +409,11 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
     } catch (dbError) {
       console.warn('Could not save OTP to database collection (OTP is saved in User model):', dbError.message);
     }
-    
+
     return { success: true, message: 'OTP sent to email', messageId: info.messageId };
   } catch (error) {
     console.error('Error sending email OTP:', error);
-    
+
     console.log(`📧 Email OTP for ${email}: ${otp} (Email failed - check console)`);
     return { success: true, message: 'OTP logged to console (email service error)' };
   }
@@ -437,7 +437,7 @@ const sendSMSViaGupshup = async (mobile, otp) => {
   const GUPSHUP_PASSWORD = process.env.GUPSHUP_PASSWORD;
   const PRINCIPAL_ENTITY_ID = process.env.PRINCIPAL_ENTITY_ID;
   const MASK = process.env.MASK;
-  const appName = process.env.APP_NAME || 'Brahmakosh';
+  const appName = process.env.APP_NAME || '3rdAI';
 
   if (!GUPSHUP_USERID || !GUPSHUP_PASSWORD) {
     throw new Error('Gupshup credentials not configured');
@@ -445,21 +445,21 @@ const sendSMSViaGupshup = async (mobile, otp) => {
 
   // ✅ FIX: Format mobile number correctly for Gupshup
   let formattedMobile = mobile.toString().replace(/\s+/g, '').replace(/[-()]/g, '');
-  
+
   // Remove any leading + sign
   formattedMobile = formattedMobile.replace(/^\+/, '');
-  
+
   // If it's a 10-digit number, add country code 91
   if (formattedMobile.length === 10 && !formattedMobile.startsWith('91')) {
     formattedMobile = '91' + formattedMobile;
   }
-  
+
   console.log(`📱 Original mobile: ${mobile}, Formatted for Gupshup: ${formattedMobile}`);
 
   // Check if this is a default mobile number with default OTP
   const defaultMobileNumbers = (process.env.DEFAULT_MOBILE_NUMBERS || '').split(',').map(n => n.trim());
   const isDefaultMobile = defaultMobileNumbers.includes(mobile.replace(/^\+91/, '').replace(/^91/, ''));
-  
+
   if (isDefaultMobile && otp === '111111') {
     console.log(`📱 Default OTP for ${mobile}: ${otp}`);
     return { success: true, message: 'Default OTP used', sid: 'default' };
@@ -491,7 +491,7 @@ const sendSMSViaGupshup = async (mobile, otp) => {
   });
 
   try {
-    const response = await axios.get('https://enterprise.smsgupshup.com/GatewayAPI/rest', { 
+    const response = await axios.get('https://enterprise.smsgupshup.com/GatewayAPI/rest', {
       params,
       timeout: 30000
     });
@@ -500,7 +500,7 @@ const sendSMSViaGupshup = async (mobile, otp) => {
 
     // Check for errors in response
     const responseText = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-    
+
     if (responseText.toLowerCase().includes('error') || responseText.toLowerCase().includes('fail')) {
       console.error('❌ Gupshup Error Response:', responseText);
       throw new Error('Failed to send OTP via Gupshup: ' + responseText);
@@ -580,21 +580,21 @@ const sendWhatsAppViaTwilio = async (mobile, otp) => {
     throw new Error('TWILIO_WHATSAPP_NUMBER is required for WhatsApp via Twilio');
   }
 
-  const appName = process.env.APP_NAME || 'Brahmakosh';
-  
+  const appName = process.env.APP_NAME || '3rdAI';
+
   const whatsappTo = mobile.startsWith('whatsapp:') ? mobile : `whatsapp:${mobile}`;
-  const whatsappFrom = process.env.TWILIO_WHATSAPP_NUMBER.startsWith('whatsapp:') 
-    ? process.env.TWILIO_WHATSAPP_NUMBER 
+  const whatsappFrom = process.env.TWILIO_WHATSAPP_NUMBER.startsWith('whatsapp:')
+    ? process.env.TWILIO_WHATSAPP_NUMBER
     : `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`;
 
   const messageBody = `Your ${appName} OTP is: ${otp}. Valid for 10 minutes.`;
-  
+
   const message = await client.messages.create({
     body: messageBody,
     from: whatsappFrom,
     to: whatsappTo
   });
-  
+
   return message;
 };
 
@@ -609,17 +609,17 @@ const sendSMSViaTwilio = async (mobile, otp) => {
     throw new Error('TWILIO_PHONE_NUMBER is required for SMS');
   }
 
-  const appName = process.env.APP_NAME || 'Brahmakosh';
+  const appName = process.env.APP_NAME || '3rdAI';
   const messageBody = `Your ${appName} OTP is: ${otp}. Valid for 10 minutes.`;
-  
+
   const cleanMobile = mobile.replace(/^whatsapp:/, '');
-  
+
   const message = await client.messages.create({
     body: messageBody,
     from: process.env.TWILIO_PHONE_NUMBER,
     to: cleanMobile
   });
-  
+
   return message;
 };
 
@@ -634,7 +634,7 @@ const sendSMSViaTwilio = async (mobile, otp) => {
 export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
   try {
     const otpMethod = method.toLowerCase();
-    
+
     if (!['twilio', 'gupshup', 'whatsapp'].includes(otpMethod)) {
       console.error(`Invalid OTP method: ${method}. Must be 'twilio', 'gupshup', or 'whatsapp'`);
       return { success: false, message: 'Invalid OTP method. Must be twilio, gupshup, or whatsapp.' };
@@ -653,35 +653,36 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
       }
 
       // Try Facebook WhatsApp Business API first
-      if (process.env.USE_WHATSAPP_BUSINESS_API === 'true' && 
-          process.env.WHATSAPP_TOKEN && 
-          process.env.WHATSAPP_PHONE_ID) {
+      if (process.env.USE_WHATSAPP_BUSINESS_API === 'true' &&
+        process.env.WHATSAPP_TOKEN &&
+        process.env.WHATSAPP_PHONE_ID) {
         try {
-          const whatsappTo = normalizedMobile.startsWith('+') ? normalizedMobile : `+${normalizedMobile}`;
+          // IMPORTANT: Facebook WhatsApp API requires the number without '+'
+          const whatsappTo = normalizedMobile.replace(/^\+/, '');
           const result = await sendWhatsAppViaFacebookAPI({ to: whatsappTo, otp });
-          
+
           console.log(`✅ WhatsApp OTP sent via Facebook API to ${whatsappTo}. Message ID: ${result.messages?.[0]?.id || 'N/A'}`);
-          
+
           try {
             await OTP.updateMany(
               { mobile: normalizedMobile, type: { $in: ['whatsapp', 'sms', 'mobile'] }, isUsed: false },
               { $set: { isUsed: true } }
             );
-            
+
             await OTP.create({
               mobile: normalizedMobile,
               otp,
               expiresAt,
               type: 'whatsapp',
-              client: 'brahmakosh'
+              client: '3rdAI'
             });
           } catch (dbError) {
             console.warn('Could not save OTP to database collection (OTP is saved in User model):', dbError.message);
           }
-          
-          return { 
-            success: true, 
-            message: 'OTP sent via WhatsApp (Facebook API)', 
+
+          return {
+            success: true,
+            message: 'OTP sent via WhatsApp (Facebook API)',
             messageId: result.messages?.[0]?.id,
             method: 'whatsapp'
           };
@@ -692,49 +693,49 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
       }
 
       // Fallback to Twilio WhatsApp
-      if (process.env.TWILIO_ACCOUNT_SID && 
-          process.env.TWILIO_AUTH_TOKEN && 
-          process.env.TWILIO_WHATSAPP_NUMBER) {
+      if (process.env.TWILIO_ACCOUNT_SID &&
+        process.env.TWILIO_AUTH_TOKEN &&
+        process.env.TWILIO_WHATSAPP_NUMBER) {
         try {
           const message = await sendWhatsAppViaTwilio(normalizedMobile, otp);
-          
+
           console.log(`✅ WhatsApp OTP sent via Twilio to ${normalizedMobile}. Message SID: ${message.sid}`);
-          
+
           try {
             await OTP.updateMany(
               { mobile: normalizedMobile, type: { $in: ['whatsapp', 'sms', 'mobile'] }, isUsed: false },
               { $set: { isUsed: true } }
             );
-            
+
             await OTP.create({
               mobile: normalizedMobile,
               otp,
               expiresAt,
               type: 'whatsapp',
-              client: 'brahmakosh'
+              client: '3rdAI'
             });
           } catch (dbError) {
             console.warn('Could not save OTP to database collection (OTP is saved in User model):', dbError.message);
           }
-          
-          return { 
-            success: true, 
-            message: 'OTP sent via WhatsApp (Twilio)', 
+
+          return {
+            success: true,
+            message: 'OTP sent via WhatsApp (Twilio)',
             messageSid: message.sid,
             method: 'whatsapp'
           };
         } catch (twilioError) {
           console.error('Twilio WhatsApp error:', twilioError);
-          
+
           if (twilioError.code === 63007) {
             console.error('❌ User has not opted in to WhatsApp. User must send a message first.');
-            return { 
-              success: false, 
+            return {
+              success: false,
               message: 'WhatsApp number not opted in. Please send a WhatsApp message to the Twilio number first.',
               method: 'whatsapp'
             };
           }
-          
+
           throw twilioError;
         }
       }
@@ -760,29 +761,29 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
       }
 
       const result = await sendSMSViaGupshup(normalizedMobile, otp);
-      
+
       console.log(`✅ Gupshup SMS OTP sent to ${normalizedMobile}`);
-      
+
       try {
         await OTP.updateMany(
           { mobile: normalizedMobile, type: { $in: ['whatsapp', 'sms', 'mobile'] }, isUsed: false },
           { $set: { isUsed: true } }
         );
-        
+
         await OTP.create({
           mobile: normalizedMobile,
           otp,
           expiresAt,
           type: 'sms',
-          client: 'brahmakosh'
+          client: '3rdAI'
         });
       } catch (dbError) {
         console.warn('Could not save OTP to database collection (OTP is saved in User model):', dbError.message);
       }
-      
-      return { 
-        success: true, 
-        message: 'OTP sent via Gupshup SMS', 
+
+      return {
+        success: true,
+        message: 'OTP sent via Gupshup SMS',
         method: 'gupshup'
       };
     }
@@ -803,15 +804,15 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
       }
 
       const message = await sendSMSViaTwilio(normalizedMobile, otp);
-      
+
       console.log(`✅ Twilio SMS OTP sent to ${normalizedMobile}. Message SID: ${message.sid}`);
-      
+
       try {
         await OTP.updateMany(
           { mobile: normalizedMobile, type: { $in: ['whatsapp', 'sms', 'mobile'] }, isUsed: false },
           { $set: { isUsed: true } }
         );
-        
+
         await OTP.create({
           mobile: normalizedMobile,
           otp,
@@ -822,10 +823,10 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
       } catch (dbError) {
         console.warn('Could not save OTP to database collection (OTP is saved in User model):', dbError.message);
       }
-      
-      return { 
-        success: true, 
-        message: 'OTP sent via Twilio SMS', 
+
+      return {
+        success: true,
+        message: 'OTP sent via Twilio SMS',
         messageSid: message.sid,
         method: 'twilio'
       };
@@ -833,14 +834,14 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
 
   } catch (error) {
     console.error(`Error sending ${method} OTP:`, error);
-    
+
     const normalizedMobile = mobile.replace(/^whatsapp:/, '');
     console.log(`📱 ${method.toUpperCase()} OTP for ${normalizedMobile}: ${otp} (${method} failed - check console)`);
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       message: `OTP logged to console (${method} service error)`,
-      method 
+      method
     };
   }
 };
@@ -859,14 +860,14 @@ export const sendWhatsAppOTP = async (mobile, otp) => {
 export const verifyOTPFromDB = async (mobile, otp, type = 'mobile') => {
   try {
     const normalizedMobile = mobile.replace(/^whatsapp:/, '');
-    
-    const record = await OTP.findOne({ 
-      mobile: normalizedMobile, 
-      otp, 
+
+    const record = await OTP.findOne({
+      mobile: normalizedMobile,
+      otp,
       type: type === 'mobile' ? { $in: ['whatsapp', 'sms', 'mobile'] } : type,
-      isUsed: false 
+      isUsed: false
     });
-    
+
     if (!record) {
       return { valid: false, message: 'Invalid OTP' };
     }
