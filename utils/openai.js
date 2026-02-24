@@ -52,7 +52,7 @@ export const getOpenAIApiKey = async (clientId = null) => {
 export const getChatCompletion = async (messages, options = {}) => {
   try {
     const client = getOpenAIClient();
-    
+
     const {
       model = process.env.OPENAI_MODEL || 'gpt-4o-mini',
       temperature = parseFloat(process.env.OPENAI_TEMPERATURE || '0.7'),
@@ -89,7 +89,7 @@ export const getChatCompletionFromDb = async (messages, options = {}, clientId =
     const apiKey = await getOpenAIApiKey(clientId);
     if (!apiKey) {
       console.warn('OpenAI API key not configured in DB or env. Skipping completion.');
-      return { success: false, content: '' };
+      return { success: false, content: '', error: 'OpenAI API key not configured' };
     }
 
     const client = new OpenAI({ apiKey });
@@ -117,7 +117,13 @@ export const getChatCompletionFromDb = async (messages, options = {}, clientId =
     };
   } catch (error) {
     console.error('OpenAI API (DB key) Error:', error);
-    return { success: false, content: '' };
+    let errorMessage = error.message;
+    if (errorMessage.includes('Incorrect API key provided')) {
+      errorMessage = 'Invalid OpenAI API key configured. Please update it in the Admin Tools page.';
+    } else if (errorMessage.includes('401')) {
+      errorMessage = 'Unauthorized Access. Please check your OpenAI API key.';
+    }
+    return { success: false, content: '', error: errorMessage };
   }
 };
 
@@ -130,7 +136,7 @@ export const getChatCompletionFromDb = async (messages, options = {}, clientId =
 export const streamChatCompletion = async function* (messages, options = {}) {
   try {
     const client = getOpenAIClient();
-    
+
     const {
       model = process.env.OPENAI_MODEL || 'gpt-4o-mini',
       temperature = parseFloat(process.env.OPENAI_TEMPERATURE || '0.7'),

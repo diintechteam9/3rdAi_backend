@@ -22,21 +22,21 @@ router.post('/start', authenticate, async (req, res) => {
   });
 
   try {
-    // CRITICAL: This endpoint is ONLY for 'user' role
+    // Allow both 'user' and 'client' roles
     const tokenRole = req.decodedRole;
     console.log('[Voice POST /start] Token role:', tokenRole);
-    
-    if (tokenRole !== 'user') {
+
+    if (tokenRole !== 'user' && tokenRole !== 'client') {
       console.error('[Voice POST /start] Access denied - Wrong role:', {
         tokenRole: tokenRole,
-        requiredRole: 'user',
+        requiredRoles: ['user', 'client'],
         userId: req.user?._id
       });
       return res.status(403).json({
         success: false,
-        message: `Access denied. This endpoint is only for 'user' role. Your current role is '${tokenRole}'. Please login as a user.`,
+        message: `Access denied. This endpoint is only for 'user' or 'client' roles. Your current role is '${tokenRole}'.`,
         error: 'INVALID_ROLE',
-        requiredRole: 'user',
+        requiredRoles: ['user', 'client'],
         currentRole: tokenRole
       });
     }
@@ -57,10 +57,11 @@ router.post('/start', authenticate, async (req, res) => {
     let chat = null;
     if (chatId && chatId !== 'new') {
       console.log('[Voice POST /start] Looking for existing chat:', chatId);
-      chat = await Chat.findOne({
-        _id: chatId,
-        userId: req.user._id
-      });
+      const matchQuery = tokenRole === 'client'
+        ? { _id: chatId, clientId: req.user._id }
+        : { _id: chatId, userId: req.user._id };
+
+      chat = await Chat.findOne(matchQuery);
       if (chat) {
         console.log('[Voice POST /start] Found existing chat:', chat._id);
       } else {
@@ -71,7 +72,8 @@ router.post('/start', authenticate, async (req, res) => {
     if (!chat) {
       console.log('[Voice POST /start] Creating new chat for user:', req.user._id);
       chat = new Chat({
-        userId: req.user._id,
+        userId: tokenRole === 'user' ? req.user._id : undefined,
+        clientId: tokenRole === 'client' ? req.user._id : undefined,
         title: 'Voice Chat',
         messages: []
       });
@@ -128,21 +130,21 @@ router.post('/process', authenticate, async (req, res) => {
   });
 
   try {
-    // CRITICAL: This endpoint is ONLY for 'user' role
+    // Allow both 'user' and 'client' roles
     const tokenRole = req.decodedRole;
     console.log('[Voice POST /process] Token role:', tokenRole);
-    
-    if (tokenRole !== 'user') {
+
+    if (tokenRole !== 'user' && tokenRole !== 'client') {
       console.error('[Voice POST /process] Access denied - Wrong role:', {
         tokenRole: tokenRole,
-        requiredRole: 'user',
+        requiredRoles: ['user', 'client'],
         userId: req.user?._id
       });
       return res.status(403).json({
         success: false,
-        message: `Access denied. This endpoint is only for 'user' role. Your current role is '${tokenRole}'. Please login as a user.`,
+        message: `Access denied. This endpoint is only for 'user' or 'client' roles. Your current role is '${tokenRole}'.`,
         error: 'INVALID_ROLE',
-        requiredRole: 'user',
+        requiredRoles: ['user', 'client'],
         currentRole: tokenRole
       });
     }
@@ -182,10 +184,11 @@ router.post('/process', authenticate, async (req, res) => {
 
     // Find or create chat
     console.log('[Voice POST /process] Finding chat:', chatId);
-    let chat = await Chat.findOne({
-      _id: chatId,
-      userId: req.user._id
-    });
+    const matchQuery = tokenRole === 'client'
+      ? { _id: chatId, clientId: req.user._id }
+      : { _id: chatId, userId: req.user._id };
+
+    let chat = await Chat.findOne(matchQuery);
 
     if (!chat) {
       console.log('[Voice POST /process] Chat not found, creating new chat');
@@ -222,7 +225,7 @@ router.post('/process', authenticate, async (req, res) => {
       // Convert WebM/Opus to 16-bit PCM WAV for reliable Deepgram processing
       console.log('[Voice POST /process] Converting audio to linear16 WAV for Deepgram...');
       const inputFormatHint = audioFormat || 'webm';
-      
+
       // Additional validation: check if buffer looks valid (has minimum expected size and starts with expected bytes)
       const minExpectedSize = 1000; // At least 1KB for a valid WebM header
       if (originalBuffer.length < minExpectedSize) {
@@ -235,7 +238,7 @@ router.post('/process', authenticate, async (req, res) => {
           }
         });
       }
-      
+
       try {
         audioBuffer = await convertToLinear16Wav(originalBuffer, inputFormatHint);
         console.log('[Voice POST /process] Converted WAV buffer created:', { size: audioBuffer.length, unit: 'bytes' });
@@ -275,7 +278,7 @@ router.post('/process', authenticate, async (req, res) => {
         encoding: 'linear16',
         sample_rate: 16000
       };
-      
+
       console.log('[Voice POST /process] Deepgram options:', deepgramOptions);
       const transcriptionStartTime = Date.now();
       transcribedText = await transcribeAudio(audioBuffer, deepgramOptions);
@@ -437,19 +440,19 @@ router.post('/process', authenticate, async (req, res) => {
  * - Server sends audio response
  */
 router.get('/stream', authenticate, async (req, res) => {
-  // CRITICAL: This endpoint is ONLY for 'user' role
+  // Allow both 'user' and 'client' roles
   const tokenRole = req.decodedRole;
-  
-  if (tokenRole !== 'user') {
+
+  if (tokenRole !== 'user' && tokenRole !== 'client') {
     console.error('[Voice GET /stream] Access denied - Wrong role:', {
       tokenRole: tokenRole,
-      requiredRole: 'user'
+      requiredRoles: ['user', 'client']
     });
     return res.status(403).json({
       success: false,
-      message: `Access denied. This endpoint is only for 'user' role. Your current role is '${tokenRole}'. Please login as a user.`,
+      message: `Access denied. This endpoint is only for 'user' or 'client' roles. Your current role is '${tokenRole}'.`,
       error: 'INVALID_ROLE',
-      requiredRole: 'user',
+      requiredRoles: ['user', 'client'],
       currentRole: tokenRole
     });
   }

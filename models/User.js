@@ -26,8 +26,13 @@ const userSchema = new mongoose.Schema({
   },
   profile: {
     name: String,
-    policeStation: String,
-    serviceId: String
+    address: String,
+    currentLocation: String
+  },
+  approvalStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
   },
   // Live location (current/last known location)
   liveLocation: {

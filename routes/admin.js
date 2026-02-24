@@ -481,7 +481,11 @@ router.get('/settings/gemini-api-key', async (req, res) => {
 router.put('/settings/gemini-api-key', async (req, res) => {
   try {
     const { apiKey, clientId } = req.body;
-    const value = apiKey != null ? String(apiKey).trim() || null : null;
+    let value = apiKey != null ? String(apiKey).trim() || null : null;
+
+    if (value && (value.includes('xxxxxxxx') || value === 'AIza-test-fake' || value === 'AIza-')) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid Gemini API key. Placeholders or test keys are not allowed.' });
+    }
 
     if (clientId) {
       const isObjectId = mongoose.Types.ObjectId.isValid(clientId) && String(clientId).length === 24;
@@ -576,7 +580,11 @@ router.get('/settings/openai-api-key', async (req, res) => {
 router.put('/settings/openai-api-key', async (req, res) => {
   try {
     const { apiKey, clientId } = req.body;
-    const value = apiKey != null ? String(apiKey).trim() || null : null;
+    let value = apiKey != null ? String(apiKey).trim() || null : null;
+
+    if (value && (value.includes('xxxxxxxx') || value === 'sk-test-fake' || value === 'sk-')) {
+      return res.status(400).json({ success: false, message: 'Please provide a valid OpenAI API key. Placeholders or test keys are not allowed.' });
+    }
 
     if (clientId) {
       const isObjectId = mongoose.Types.ObjectId.isValid(clientId) && String(clientId).length === 24;

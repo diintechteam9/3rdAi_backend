@@ -37,6 +37,18 @@ const partnerSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  designation: {
+    type: String,
+    default: null
+  },
+  policeId: {
+    type: String,
+    default: null
+  },
+  policeStation: {
+    type: String,
+    default: null
+  },
 
   // Profile Information
   profilePicture: {

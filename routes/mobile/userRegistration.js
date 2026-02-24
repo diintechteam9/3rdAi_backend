@@ -54,10 +54,14 @@ router.post('/register-with-image', upload.single('image'), async (req, res) => 
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists with this email'
-      });
+      if (existingUser.approvalStatus === 'rejected') {
+        await User.deleteOne({ _id: existingUser._id });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'User already exists with this email'
+        });
+      }
     }
 
     let profileImageKey = null;
@@ -71,7 +75,7 @@ router.post('/register-with-image', upload.single('image'), async (req, res) => 
 
         // Upload to S3 directly using the existing s3Client
         const uploadCommand = new PutObjectCommand({
-          Bucket: process.env.AWS_BUCKET_NAME,
+          Bucket: process.env.R2_BUCKET,
           Key: imageKey,
           Body: imageFile.buffer,
           ContentType: imageFile.mimetype,

@@ -1,7 +1,8 @@
 import express from 'express';
 import multer from 'multer';
-import { PutObjectCommand 
-      } from '@aws-sdk/client-s3';
+import {
+  PutObjectCommand
+} from '@aws-sdk/client-s3';
 import { v4 as uuidv4 } from 'uuid';
 import Partner from '../../models/Partner.js';
 import Client from '../../models/Client.js';
@@ -37,7 +38,7 @@ async function validateClientId(clientCode) {
   }
 
   const client = await Client.findOne({ clientId: clientCode.toUpperCase() });
-  
+
   if (!client) {
     throw new Error('Invalid Client ID');
   }
@@ -63,9 +64,9 @@ router.post('/register/step1', async (req, res) => {
     const { email, password, clientId: clientCode } = req.body;
 
     if (!email) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
       });
     }
 
@@ -73,15 +74,15 @@ router.post('/register/step1', async (req, res) => {
     const client = await validateClientId(clientCode);
 
     // Check if partner already exists for this client
-    let partner = await Partner.findOne({ 
+    let partner = await Partner.findOne({
       clientId: client._id,
-      email 
+      email
     }).select('+emailOtp +emailOtpExpiry');
-    
+
     if (partner && partner.registrationStep === 3) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Partner already registered with this email for this client' 
+      return res.status(400).json({
+        success: false,
+        message: 'Partner already registered with this email for this client'
       });
     }
 
@@ -131,9 +132,9 @@ router.post('/register/step1', async (req, res) => {
     });
   } catch (error) {
     console.error('Step 1 registration error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Failed to initiate registration' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to initiate registration'
     });
   }
 });
@@ -149,33 +150,33 @@ router.post('/register/step1/verify', async (req, res) => {
     console.log(req.body);
 
     if (!email || !otp) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email and OTP are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email and OTP are required'
       });
     }
 
     // Validate client
     const client = await validateClientId(clientCode);
 
-    const partner = await Partner.findOne({ 
+    const partner = await Partner.findOne({
       clientId: client._id,
-      email 
+      email
     }).select('+emailOtp +emailOtpExpiry');
-    
+
     if (!partner) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Partner not found. Please start registration again.' 
+      return res.status(404).json({
+        success: false,
+        message: 'Partner not found. Please start registration again.'
       });
     }
 
     // Validate OTP
     const validation = validateOTP(partner.emailOtp, otp, partner.emailOtpExpiry);
     if (!validation.valid) {
-      return res.status(400).json({ 
-        success: false, 
-        message: validation.message 
+      return res.status(400).json({
+        success: false,
+        message: validation.message
       });
     }
 
@@ -198,9 +199,9 @@ router.post('/register/step1/verify', async (req, res) => {
     });
   } catch (error) {
     console.error('Email OTP verification error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Failed to verify email OTP' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to verify email OTP'
     });
   }
 });
@@ -215,16 +216,16 @@ router.post('/register/step2', async (req, res) => {
     const { email, phone, otpMethod, clientId: clientCode } = req.body;
 
     if (!phone) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Phone number is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required'
       });
     }
 
     if (!otpMethod || !['twilio', 'gupshup', 'whatsapp'].includes(otpMethod)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'OTP method is required (twilio, gupshup, or whatsapp)' 
+      return res.status(400).json({
+        success: false,
+        message: 'OTP method is required (twilio, gupshup, or whatsapp)'
       });
     }
 
@@ -234,28 +235,28 @@ router.post('/register/step2', async (req, res) => {
     // Validate phone format
     const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/;
     if (!phoneRegex.test(phone)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid phone number format' 
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid phone number format'
       });
     }
 
     // Find partner by email for this client
     let partner = null;
     if (email) {
-      partner = await Partner.findOne({ 
+      partner = await Partner.findOne({
         clientId: client._id,
-        email 
+        email
       }).select('+phoneOtp +phoneOtpExpiry');
     }
-    
+
     if (!partner) {
-      partner = await Partner.findOne({ 
+      partner = await Partner.findOne({
         clientId: client._id,
-        phone 
+        phone
       }).select('+phoneOtp +phoneOtpExpiry');
     }
-    
+
     if (!partner) {
       partner = new Partner({
         email: email || `phone_${phone}@temp.com`,
@@ -269,17 +270,17 @@ router.post('/register/step2', async (req, res) => {
     }
 
     // Check if phone is already registered to another partner in this client
-    const existingPhonePartner = await Partner.findOne({ 
+    const existingPhonePartner = await Partner.findOne({
       clientId: client._id,
-      phone, 
+      phone,
       _id: { $ne: partner._id },
-      phoneVerified: true 
+      phoneVerified: true
     });
-    
+
     if (existingPhonePartner) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Phone number already registered for this client' 
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number already registered for this client'
       });
     }
 
@@ -305,7 +306,7 @@ router.post('/register/step2', async (req, res) => {
     } else {
       otpResult = await sendMobileOTP(phone, otp, 'twilio');
     }
-    
+
     if (!otpResult.success) {
       console.warn(`${otpMethod.toUpperCase()} OTP sending had issues, but continuing:`, otpResult.message);
     }
@@ -323,9 +324,9 @@ router.post('/register/step2', async (req, res) => {
     });
   } catch (error) {
     console.error('Step 2 registration error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Failed to send phone OTP' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to send phone OTP'
     });
   }
 });
@@ -340,9 +341,9 @@ router.post('/register/step2/verify', async (req, res) => {
     const { email, phone, otp, clientId: clientCode } = req.body;
 
     if (!otp || (!email && !phone)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'OTP and either email or phone number are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'OTP and either email or phone number are required'
       });
     }
 
@@ -352,38 +353,38 @@ router.post('/register/step2/verify', async (req, res) => {
     // Find partner by email or phone for this client
     let partner = null;
     if (email) {
-      partner = await Partner.findOne({ 
+      partner = await Partner.findOne({
         clientId: client._id,
-        email 
+        email
       }).select('+phoneOtp +phoneOtpExpiry');
     }
     if (!partner && phone) {
-      partner = await Partner.findOne({ 
+      partner = await Partner.findOne({
         clientId: client._id,
-        phone 
+        phone
       }).select('+phoneOtp +phoneOtpExpiry');
     }
-    
+
     if (!partner) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Partner not found. Please send phone OTP first (step 2).' 
+      return res.status(404).json({
+        success: false,
+        message: 'Partner not found. Please send phone OTP first (step 2).'
       });
     }
-    
+
     if (!partner.phoneOtp) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'No OTP found. Please send phone OTP first (step 2).' 
+      return res.status(400).json({
+        success: false,
+        message: 'No OTP found. Please send phone OTP first (step 2).'
       });
     }
 
     // Validate OTP
     const validation = validateOTP(partner.phoneOtp, otp, partner.phoneOtpExpiry);
     if (!validation.valid) {
-      return res.status(400).json({ 
-        success: false, 
-        message: validation.message 
+      return res.status(400).json({
+        success: false,
+        message: validation.message
       });
     }
 
@@ -407,9 +408,9 @@ router.post('/register/step2/verify', async (req, res) => {
     });
   } catch (error) {
     console.error('Phone OTP verification error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Failed to verify phone OTP' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to verify phone OTP'
     });
   }
 });
@@ -432,8 +433,8 @@ router.post('/register/step2/verify', async (req, res) => {
  */
 router.post('/register/step3', async (req, res) => {
   try {
-    const { 
-      email, 
+    const {
+      email,
       clientId: clientCode,
       name,
       experienceRange,
@@ -447,18 +448,18 @@ router.post('/register/step3', async (req, res) => {
     } = req.body;
 
     const { phone } = req.body;
-    
+
     if (!email && !phone) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email or phone number is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email or phone number is required'
       });
     }
 
     if (!name) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Name is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Name is required'
       });
     }
 
@@ -468,18 +469,18 @@ router.post('/register/step3', async (req, res) => {
     // Find partner by email or phone for this client
     let partner = null;
     if (email) {
-      partner = await Partner.findOne({ 
+      partner = await Partner.findOne({
         clientId: client._id,
-        email 
+        email
       });
     }
     if (!partner && phone) {
-      partner = await Partner.findOne({ 
+      partner = await Partner.findOne({
         clientId: client._id,
-        phone 
+        phone
       });
     }
-    
+
     // If partner doesn't exist, create one
     if (!partner) {
       partner = new Partner({
@@ -496,7 +497,7 @@ router.post('/register/step3', async (req, res) => {
 
     // Update profile information
     partner.name = name;
-    
+
     // Update optional fields
     if (experienceRange) {
       partner.experienceRange = experienceRange;
@@ -504,41 +505,41 @@ router.post('/register/step3', async (req, res) => {
       const expMap = { '0-2': 1, '3-5': 4, '6-10': 8, '10+': 15 };
       partner.experience = expMap[experienceRange] || 0;
     }
-    
+
     if (expertiseCategory) partner.expertiseCategory = expertiseCategory;
-    
+
     if (skills && Array.isArray(skills)) {
       if (skills.length > 5) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Maximum 5 skills allowed' 
+        return res.status(400).json({
+          success: false,
+          message: 'Maximum 5 skills allowed'
         });
       }
       partner.skills = skills;
     }
-    
+
     if (consultationModes && Array.isArray(consultationModes)) {
       partner.consultationModes = consultationModes;
     }
-    
+
     if (languages && Array.isArray(languages)) {
       partner.languages = languages;
     }
-    
+
     if (bio) {
       if (bio.length > 300) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Bio must be 300 characters or less (approximately 50 words)' 
+        return res.status(400).json({
+          success: false,
+          message: 'Bio must be 300 characters or less (approximately 50 words)'
         });
       }
       partner.bio = bio;
     }
-    
+
     if (availabilityPreference && Array.isArray(availabilityPreference)) {
       partner.availabilityPreference = availabilityPreference;
     }
-    
+
     if (location) {
       if (location.city) partner.location.city = location.city;
       if (location.country) partner.location.country = location.country;
@@ -585,9 +586,9 @@ router.post('/register/step3', async (req, res) => {
     });
   } catch (error) {
     console.error('Step 3 registration error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Failed to complete profile' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to complete profile'
     });
   }
 });
@@ -648,7 +649,7 @@ router.post('/register/step4', authenticate, upload.single('image'), async (req,
     const imageKey = `images/partner/${partner._id}/profile/${uuidv4()}.${fileExtension}`;
 
     const uploadCommand = new PutObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
+      Bucket: process.env.R2_BUCKET,
       Key: imageKey,
       Body: imageFile.buffer,
       ContentType: imageFile.mimetype,
@@ -744,7 +745,7 @@ router.post('/profile/picture', authenticate, upload.single('image'), async (req
     const imageKey = `images/partner/${partner._id}/profile/${uuidv4()}.${fileExtension}`;
 
     const uploadCommand = new PutObjectCommand({
-      Bucket: process.env.AWS_BUCKET_NAME,
+      Bucket: process.env.R2_BUCKET,
       Key: imageKey,
       Body: imageFile.buffer,
       ContentType: imageFile.mimetype,
@@ -795,9 +796,9 @@ router.post('/check-email', async (req, res) => {
     const { email, clientId: clientCode } = req.body;
 
     if (!email) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
       });
     }
 
@@ -815,7 +816,7 @@ router.post('/check-email', async (req, res) => {
         clientCode: client.clientId
       });
       await partner.save();
-      
+
       return res.json({
         success: false,
         message: 'not registered',
@@ -851,9 +852,9 @@ router.post('/check-email', async (req, res) => {
     }
 
     if (!partner.isActive) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Account is inactive. Please contact administrator.' 
+      return res.status(401).json({
+        success: false,
+        message: 'Account is inactive. Please contact administrator.'
       });
     }
 
@@ -873,9 +874,9 @@ router.post('/check-email', async (req, res) => {
     });
   } catch (error) {
     console.error('Check email error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Failed to check email' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to check email'
     });
   }
 });
@@ -894,9 +895,9 @@ router.post('/login', async (req, res) => {
     const { email, password, clientId: clientCode } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email and password are required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
       });
     }
 
@@ -909,17 +910,17 @@ router.post('/login', async (req, res) => {
 
     // Find partner by email (and optionally by clientId)
     const partner = await Partner.findOne(query).select('+password');
-    
+
     if (!partner) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid credentials' 
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
       });
     }
 
     if (partner.registrationStep < 3) {
-      return res.status(400).json({ 
-        success: false, 
+      return res.status(400).json({
+        success: false,
         message: 'Registration incomplete. Please complete all registration steps.',
         data: {
           registrationStep: partner.registrationStep,
@@ -931,16 +932,16 @@ router.post('/login', async (req, res) => {
 
     const isPasswordValid = await partner.comparePassword(password);
     if (!isPasswordValid) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Invalid credentials' 
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
       });
     }
 
     if (!partner.isActive) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Account is inactive. Please contact administrator.' 
+      return res.status(401).json({
+        success: false,
+        message: 'Account is inactive. Please contact administrator.'
       });
     }
 
@@ -951,8 +952,8 @@ router.post('/login', async (req, res) => {
       success: true,
       message: 'Login successful',
       data: {
-        partner: { 
-          ...partner.toObject(), 
+        partner: {
+          ...partner.toObject(),
           role: 'partner',
           password: undefined // Remove password from response
         },
@@ -963,9 +964,9 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Login failed' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Login failed'
     });
   }
 });
@@ -982,18 +983,18 @@ router.post('/login', async (req, res) => {
 router.get('/profile', authenticate, async (req, res) => {
   try {
     if (req.user.role !== 'partner') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Partner access required.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Partner access required.'
       });
     }
 
     const partner = await Partner.findById(req.user._id).select('-password');
-    
+
     if (!partner) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Partner not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Partner not found'
       });
     }
 
@@ -1027,9 +1028,9 @@ router.get('/profile', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Get profile error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Failed to fetch profile' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch profile'
     });
   }
 });
@@ -1047,18 +1048,18 @@ router.get('/profile', authenticate, async (req, res) => {
 router.put('/profile', authenticate, async (req, res) => {
   try {
     if (req.user.role !== 'partner') {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Partner access required.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Partner access required.'
       });
     }
 
     const partner = await Partner.findById(req.user._id);
-    
+
     if (!partner) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Partner not found' 
+      return res.status(404).json({
+        success: false,
+        message: 'Partner not found'
       });
     }
 
@@ -1067,48 +1068,48 @@ router.put('/profile', authenticate, async (req, res) => {
     if (req.body.phone) partner.phone = req.body.phone;
     if (req.body.email) partner.email = req.body.email;
     if (req.body.password) partner.password = req.body.password;
-    
+
     // Update professional fields
     if (req.body.experienceRange) {
       partner.experienceRange = req.body.experienceRange;
       const expMap = { '0-2': 1, '3-5': 4, '6-10': 8, '10+': 15 };
       partner.experience = expMap[req.body.experienceRange] || 0;
     }
-    
+
     if (req.body.expertiseCategory) partner.expertiseCategory = req.body.expertiseCategory;
-    
+
     if (req.body.skills && Array.isArray(req.body.skills)) {
       if (req.body.skills.length > 5) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Maximum 5 skills allowed' 
+        return res.status(400).json({
+          success: false,
+          message: 'Maximum 5 skills allowed'
         });
       }
       partner.skills = req.body.skills;
     }
-    
+
     if (req.body.consultationModes && Array.isArray(req.body.consultationModes)) {
       partner.consultationModes = req.body.consultationModes;
     }
-    
+
     if (req.body.languages && Array.isArray(req.body.languages)) {
       partner.languages = req.body.languages;
     }
-    
+
     if (req.body.bio !== undefined) {
       if (req.body.bio.length > 300) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Bio must be 300 characters or less' 
+        return res.status(400).json({
+          success: false,
+          message: 'Bio must be 300 characters or less'
         });
       }
       partner.bio = req.body.bio;
     }
-    
+
     if (req.body.availabilityPreference && Array.isArray(req.body.availabilityPreference)) {
       partner.availabilityPreference = req.body.availabilityPreference;
     }
-    
+
     // Update location
     if (req.body.location) {
       if (req.body.location.city !== undefined) partner.location.city = req.body.location.city;
@@ -1143,9 +1144,9 @@ router.put('/profile', authenticate, async (req, res) => {
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Failed to update profile' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update profile'
     });
   }
 });
@@ -1164,31 +1165,31 @@ router.post('/register/resend-email-otp', async (req, res) => {
     const { email, clientId: clientCode } = req.body;
 
     if (!email) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
       });
     }
 
     // Validate client
     const client = await validateClientId(clientCode);
 
-    const partner = await Partner.findOne({ 
+    const partner = await Partner.findOne({
       clientId: client._id,
-      email 
+      email
     }).select('+emailOtp +emailOtpExpiry');
-    
+
     if (!partner) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Partner not found. Please start registration again.' 
+      return res.status(404).json({
+        success: false,
+        message: 'Partner not found. Please start registration again.'
       });
     }
 
     if (partner.emailVerified) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email already verified' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email already verified'
       });
     }
 
@@ -1210,9 +1211,9 @@ router.post('/register/resend-email-otp', async (req, res) => {
     });
   } catch (error) {
     console.error('Resend email OTP error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Failed to resend email OTP' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to resend email OTP'
     });
   }
 });
@@ -1227,39 +1228,39 @@ router.post('/register/resend-phone-otp', async (req, res) => {
     const { email, otpMethod, clientId: clientCode } = req.body;
 
     if (!email) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Email is required' 
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
       });
     }
 
     if (!otpMethod || !['twilio', 'gupshup', 'whatsapp'].includes(otpMethod)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'OTP method is required (twilio, gupshup, or whatsapp)' 
+      return res.status(400).json({
+        success: false,
+        message: 'OTP method is required (twilio, gupshup, or whatsapp)'
       });
     }
 
     const partner = await Partner.findOne({ email }).select('+phoneOtp +phoneOtpExpiry');
-    
+
     if (!partner) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Partner not found. Please start registration again.' 
+      return res.status(404).json({
+        success: false,
+        message: 'Partner not found. Please start registration again.'
       });
     }
 
     if (!partner.phone) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Phone number not provided. Please complete step 2 first.' 
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number not provided. Please complete step 2 first.'
       });
     }
 
     if (partner.phoneVerified) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Phone already verified' 
+      return res.status(400).json({
+        success: false,
+        message: 'Phone already verified'
       });
     }
 
@@ -1280,7 +1281,7 @@ router.post('/register/resend-phone-otp', async (req, res) => {
     } else {
       otpResult = await sendMobileOTP(partner.phone, otp, 'twilio');
     }
-    
+
     if (!otpResult.success) {
       console.warn(`${otpMethod.toUpperCase()} OTP sending had issues, but continuing:`, otpResult.message);
     }
@@ -1291,9 +1292,9 @@ router.post('/register/resend-phone-otp', async (req, res) => {
     });
   } catch (error) {
     console.error('Resend phone OTP error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message || 'Failed to resend phone OTP' 
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to resend phone OTP'
     });
   }
 });

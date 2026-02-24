@@ -13,7 +13,7 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // @access  Public
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, phone, specialization, clientId } = req.body;
+    const { name, email, password, phone, designation, policeId, policeStation, clientId } = req.body;
 
     if (!clientId) {
       return res.status(400).json({ success: false, message: 'Client ID is required' });
@@ -39,7 +39,9 @@ router.post('/register', async (req, res) => {
       email,
       password,
       phone,
-      specialization,
+      designation,
+      policeId,
+      policeStation,
       clientId: clientDoc._id
     });
 

@@ -167,12 +167,10 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Mobile users (registrationStep === 3) don't need super admin approval
-    // They are auto-approved during mobile registration
-    if (!user.loginApproved && user.registrationStep !== 3) {
+    if (user.approvalStatus === 'rejected') {
       return res.status(403).json({
         success: false,
-        message: 'Login not approved. Please wait for super admin approval.'
+        message: 'Your registration has been rejected. Please sign up again.'
       });
     }
 
@@ -184,11 +182,28 @@ router.post('/login', async (req, res) => {
     // Generate token with clientId if available
     const token = generateToken(user._id, 'user', user.clientId?._id || user.clientId);
 
+    let profileImageUrl = null;
+    if (user.profileImage && !user.profileImage.startsWith('http')) {
+      try {
+        const { getobject } = await import('../../utils/s3.js');
+        profileImageUrl = await getobject(user.profileImage);
+      } catch (error) {
+        console.error('Error generating profile image URL during login:', error);
+      }
+    } else if (user.profileImage && user.profileImage.startsWith('http')) {
+      profileImageUrl = user.profileImage;
+    }
+
+    const userData = user.toObject();
+    if (profileImageUrl) {
+      userData.profileImageUrl = profileImageUrl;
+    }
+
     res.json({
       success: true,
       message: 'Login successful',
       data: {
-        user: { ...user.toObject(), role: 'user' },
+        user: { ...userData, role: 'user' },
         token,
         clientId: user.clientId?.clientId || null,
         clientName: user.clientId?.businessName || null
@@ -223,10 +238,14 @@ router.post('/register', async (req, res) => {
 
     const existingUser = await User.findOne({ email, clientId: clientDoc._id });
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists with this email'
-      });
+      if (existingUser.approvalStatus === 'rejected') {
+        await User.deleteOne({ _id: existingUser._id });
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'User already exists with this email'
+        });
+      }
     }
 
     const user = new User({
@@ -256,10 +275,28 @@ router.post('/register', async (req, res) => {
 // Get current user
 router.get('/me', authenticate, async (req, res) => {
   try {
+    let profileImageUrl = null;
+    const user = req.user;
+    if (user.profileImage && !user.profileImage.startsWith('http')) {
+      try {
+        const { getobject } = await import('../../utils/s3.js');
+        profileImageUrl = await getobject(user.profileImage);
+      } catch (error) {
+        console.error('Error generating profile image URL:', error);
+      }
+    } else if (user.profileImage && user.profileImage.startsWith('http')) {
+      profileImageUrl = user.profileImage;
+    }
+
+    const userData = user.toObject ? user.toObject() : { ...user._doc, ...user };
+    if (profileImageUrl) {
+      userData.profileImageUrl = profileImageUrl;
+    }
+
     res.json({
       success: true,
       data: {
-        user: req.user
+        user: userData
       }
     });
   } catch (error) {

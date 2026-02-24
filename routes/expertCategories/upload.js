@@ -57,7 +57,7 @@ export const uploadCategoryImage = async (req, res) => {
 
     // Upload to S3
     const uploadParams = {
-      Bucket: process.env.AWS_BUCKET_NAME,
+      Bucket: process.env.R2_BUCKET,
       Key: filename,
       Body: req.file.buffer,
       ContentType: req.file.mimetype,
@@ -69,7 +69,7 @@ export const uploadCategoryImage = async (req, res) => {
     if (category.imageKey) {
       try {
         await s3Client.send(new DeleteObjectCommand({
-          Bucket: process.env.AWS_BUCKET_NAME,
+          Bucket: process.env.R2_BUCKET,
           Key: category.imageKey,
         }));
       } catch (deleteError) {
@@ -78,7 +78,8 @@ export const uploadCategoryImage = async (req, res) => {
     }
 
     // Generate S3 URL
-    const imageUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${filename}`;
+    const baseUrl = process.env.R2_PUBLIC_URL || `${process.env.R2_ENDPOINT}/${process.env.R2_BUCKET}`;
+    const imageUrl = `${baseUrl}/${filename}`;
 
     // Update category with new image
     category.image = imageUrl; // Store full URL

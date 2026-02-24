@@ -139,7 +139,7 @@ router.post('/users', authenticate, authorize('client', 'admin', 'super_admin'),
 router.put('/users/:userId', authenticate, authorize('client', 'admin', 'super_admin', 'user'), async (req, res) => {
   try {
     const { userId } = req.params;
-    const { profile, isActive } = req.body;
+    const { profile, isActive, approvalStatus } = req.body;
 
     const user = await User.findOne({ _id: userId, ...req.tenantFilter });
     if (!user) {
@@ -149,12 +149,12 @@ router.put('/users/:userId', authenticate, authorize('client', 'admin', 'super_a
       });
     }
 
-    // Users can only update their own profile, not isActive status
+    // Users can only update their own profile, not isActive or approvalStatus
     if (req.user.role === 'user') {
-      if (isActive !== undefined) {
+      if (isActive !== undefined || approvalStatus !== undefined) {
         return res.status(403).json({
           success: false,
-          message: 'You cannot change your active status'
+          message: 'You cannot change your active or approval status'
         });
       }
     }
@@ -164,6 +164,9 @@ router.put('/users/:userId', authenticate, authorize('client', 'admin', 'super_a
     }
     if (typeof isActive === 'boolean' && req.user.role !== 'user') {
       user.isActive = isActive;
+    }
+    if (approvalStatus && ['pending', 'approved', 'rejected'].includes(approvalStatus) && req.user.role !== 'user') {
+      user.approvalStatus = approvalStatus;
     }
 
     await user.save();
