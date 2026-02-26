@@ -33,8 +33,16 @@ const alertSchema = new mongoose.Schema(
         },
         createdBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Client',
+            // Could be Client or User, dropping strict ref for flexibility
             required: true
+        },
+        userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        metadata: {
+            type: Object,
+            default: {}
         },
         isActive: {
             type: Boolean,

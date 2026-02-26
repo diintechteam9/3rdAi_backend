@@ -155,6 +155,45 @@ router.delete('/:alertId', authenticate, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  USER ROUTES — Create Citizen Case
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/alerts/user
+ * Create a new citizen case (alert of type 'USER')
+ * Access: user
+ */
+router.post('/user', authenticate, async (req, res) => {
+    try {
+        if (req.user.role !== 'user') {
+            return res.status(403).json({ success: false, message: 'Only users can report cases' });
+        }
+
+        const { title, message, priority, formData, type } = req.body;
+
+        const alert = await Alert.create({
+            title: title || 'New Citizen Case',
+            message: message || (formData && formData.description) || 'Case reported by user',
+            priority: priority || 'high',
+            type: 'USER',
+            clientId: req.user.clientId,
+            userId: req.user._id,
+            createdBy: req.user._id,
+            metadata: formData || {}
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Case reported successfully',
+            data: { alert }
+        });
+    } catch (error) {
+        console.error('[Alerts] POST /alerts/user error:', error);
+        res.status(500).json({ success: false, message: 'Failed to report case', error: error.message });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  PARTNER ROUTES — Read-only (their client's active alerts)
 // ─────────────────────────────────────────────────────────────────────────────
 
