@@ -1,0 +1,16 @@
+﻿Testing R2 Upload...
+Bucket: 3rdai
+Endpoint: https://729d28288f441ff22f4be0bcab5e6709.r2.cloudflarestorage.com
+Upload successful! Response: {
+  ETag: '"3e25960a79dbc69b674cd4ec67a72c62"',
+  ChecksumCRC32: 'i9aeUg==',
+  VersionId: '7e636b2b6bebf101ca8fb25b95baa4f9',
+  '$metadata': {
+    httpStatusCode: 200,
+    requestId: undefined,
+    extendedRequestId: undefined,
+    cfId: undefined,
+    attempts: 1,
+    totalRetryDelay: 0
+  }
+}

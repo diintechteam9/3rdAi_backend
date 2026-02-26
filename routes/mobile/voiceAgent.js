@@ -3,6 +3,7 @@ import { createClient, LiveTranscriptionEvents } from '@deepgram/sdk';
 import OpenAI from 'openai';
 import fetch from 'node-fetch';
 import Chat from '../../models/Chat.js';
+import { getChatCompletionFromDb } from '../../utils/openai.js';
 
 // Validate environment variables
 const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
@@ -17,16 +18,10 @@ console.log('  ElevenLabs:', elevenLabsApiKey ? `${elevenLabsApiKey.substring(0,
 
 // Initialize clients
 let deepgramClient = null;
-let openai = null;
 
 if (deepgramApiKey) {
   deepgramClient = createClient(deepgramApiKey);
   console.log('[VoiceAgent] ✅ Deepgram client initialized');
-}
-
-if (openaiApiKey) {
-  openai = new OpenAI({ apiKey: openaiApiKey });
-  console.log('[VoiceAgent] ✅ OpenAI client initialized');
 }
 
 const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID || 'EXAVITQu4vr4xnSDxMaL';
@@ -40,11 +35,12 @@ export const handleVoiceAgentWebSocket = (wss) => {
     console.log('[VoiceAgent] New WebSocket connection');
 
     // Check API keys
-    if (!deepgramApiKey || !openaiApiKey || !elevenLabsApiKey) {
-      console.error('[VoiceAgent] Missing API keys, rejecting connection');
+    // NOTE: OpenAI key is fetched dynamically per-client from DB later, so we only strictly check Deepgram and ElevenLabs here.
+    if (!deepgramApiKey || !elevenLabsApiKey) {
+      console.error('[VoiceAgent] Missing Voice API keys (Deepgram/ElevenLabs), rejecting connection');
       ws.send(JSON.stringify({
         type: 'error',
-        message: 'Server configuration error: Missing API keys',
+        message: 'Server configuration error: Missing Voice API keys. Please configure Deepgram and ElevenLabs keys.',
         error: 'MISSING_API_KEYS'
       }));
       ws.close();
@@ -66,7 +62,7 @@ export const handleVoiceAgentWebSocket = (wss) => {
     // Cleanup function
     const cleanup = () => {
       console.log('[VoiceAgent] Cleaning up...');
-      
+
       if (silenceTimer) {
         clearTimeout(silenceTimer);
         silenceTimer = null;
@@ -90,7 +86,7 @@ export const handleVoiceAgentWebSocket = (wss) => {
     ws.on('message', async (message) => {
       try {
         const data = JSON.parse(message);
-        
+
         if (data.type === 'start') {
           console.log('[VoiceAgent] Start command received:', {
             chatId: data.chatId,
@@ -118,7 +114,7 @@ export const handleVoiceAgentWebSocket = (wss) => {
           // Initialize Deepgram - UPDATED CONFIGURATION
           try {
             console.log('[VoiceAgent] Creating Deepgram connection...');
-            
+
             // Configuration for 16-bit PCM audio at 16kHz
             deepgramConnection = deepgramClient.listen.live({
               model: 'nova-2',
@@ -136,7 +132,7 @@ export const handleVoiceAgentWebSocket = (wss) => {
             // Handle Open event
             deepgramConnection.on(LiveTranscriptionEvents.Open, () => {
               console.log('[VoiceAgent] ✅ Deepgram connection opened');
-              
+
               ws.send(JSON.stringify({
                 type: 'deepgram_connected',
                 message: 'Speech recognition active'
@@ -171,7 +167,7 @@ export const handleVoiceAgentWebSocket = (wss) => {
 
                 if (isFinal) {
                   accumulatedTranscript += (accumulatedTranscript ? ' ' : '') + transcript;
-                  
+
                   if (silenceTimer) {
                     clearTimeout(silenceTimer);
                   }
@@ -206,7 +202,7 @@ export const handleVoiceAgentWebSocket = (wss) => {
                 message: error.message,
                 type: error.type
               });
-              
+
               ws.send(JSON.stringify({
                 type: 'error',
                 message: 'Speech recognition error',
@@ -225,13 +221,13 @@ export const handleVoiceAgentWebSocket = (wss) => {
 
           } catch (error) {
             console.error('[VoiceAgent] Failed to initialize Deepgram:', error);
-            
+
             ws.send(JSON.stringify({
               type: 'error',
               message: 'Failed to initialize speech recognition',
               error: error.message
             }));
-            
+
             cleanup();
           }
 
@@ -249,7 +245,7 @@ export const handleVoiceAgentWebSocket = (wss) => {
             try {
               const audioBuffer = Buffer.from(data.audio, 'base64');
               deepgramConnection.send(audioBuffer);
-              
+
               audioChunkCount++;
               if (audioChunkCount % 50 === 0) {
                 console.log(`[VoiceAgent] 📤 Sent ${audioChunkCount} audio chunks to Deepgram`);
@@ -301,21 +297,24 @@ export const handleVoiceAgentWebSocket = (wss) => {
           text: userMessage
         }));
 
-        // Get OpenAI response
+        // Get OpenAI response dynamically
         console.log('[VoiceAgent] 🤖 Requesting OpenAI response...');
         const messages = chat.messages.map(msg => ({
           role: msg.role,
           content: msg.content
         }));
 
-        const completion = await openai.chat.completions.create({
+        const completion = await getChatCompletionFromDb(messages, {
           model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-          messages: messages,
           temperature: 0.7,
           max_tokens: 500
-        });
+        }, chat.clientId);
 
-        const aiResponse = completion.choices[0].message.content;
+        if (!completion.success) {
+          throw new Error(completion.error || 'Failed to get AI response');
+        }
+
+        const aiResponse = completion.content;
         console.log('[VoiceAgent] ✅ OpenAI response received:', aiResponse.substring(0, 100) + '...');
 
         // Save assistant message
@@ -351,7 +350,7 @@ export const handleVoiceAgentWebSocket = (wss) => {
         console.log('[VoiceAgent] 🔊 Starting ElevenLabs TTS...');
 
         const url = `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}/stream`;
-        
+
         const response = await fetch(url, {
           method: 'POST',
           headers: {
@@ -427,13 +426,13 @@ export const handleVoiceAgentWebSocket = (wss) => {
 
 // Export setup function
 export const setupVoiceAgentWebSocket = (server) => {
-  const wss = new WebSocketServer({ 
+  const wss = new WebSocketServer({
     server,
     path: '/api/voice/agent'
   });
 
   handleVoiceAgentWebSocket(wss);
-  
+
   console.log('[VoiceAgent] ✅ WebSocket server initialized at /api/voice/agent');
   return wss;
 };

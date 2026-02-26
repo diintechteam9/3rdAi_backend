@@ -28,6 +28,10 @@ const conversationSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  aadhaarNumber: {
+    type: String,
+    default: null
+  },
 
   // Status Management
   status: {

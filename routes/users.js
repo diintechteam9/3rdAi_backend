@@ -1,9 +1,20 @@
 import express from 'express';
 import User from '../models/User.js';
+import multer from 'multer';
 import { authenticate } from '../middleware/auth.js';
-import { getobject, extractS3KeyFromUrl } from '../utils/s3.js';
+import { getobject, extractS3KeyFromUrl, uploadToS3 } from '../utils/s3.js';
 
 const router = express.Router();
+
+// Multer — memory storage for optional profile picture uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are allowed'), false);
+  }
+});
 
 // All routes require authentication
 router.use(authenticate);
@@ -65,20 +76,44 @@ router.get('/me', authenticate, async (req, res) => {
 });
 
 // Update user profile
-router.put('/profile', async (req, res) => {
+router.put('/profile', upload.single('profileImage'), async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
+
+    // Handle profile image upload if provided
+    if (req.file) {
+      try {
+        const uploadResult = await uploadToS3(req.file, 'user-profiles');
+        user.profileImage = uploadResult.url;
+      } catch (uploadError) {
+        console.error('User profile image upload failed:', uploadError.message);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to upload profile image: ' + uploadError.message
+        });
+      }
+    }
 
     if (req.body.password) {
       user.password = req.body.password;
     }
 
     if (req.body.profile) {
-      user.profile = { ...user.profile, ...req.body.profile };
+      try {
+        const parsedProfile = typeof req.body.profile === 'string' ? JSON.parse(req.body.profile) : req.body.profile;
+        user.profile = { ...user.profile, ...parsedProfile };
+      } catch (e) {
+        console.error('Failed to parse req.body.profile', e);
+      }
     }
 
     if (req.body.clientInfo) {
-      user.clientInfo = { ...user.clientInfo, ...req.body.clientInfo };
+      try {
+        const parsedClientInfo = typeof req.body.clientInfo === 'string' ? JSON.parse(req.body.clientInfo) : req.body.clientInfo;
+        user.clientInfo = { ...user.clientInfo, ...parsedClientInfo };
+      } catch (e) {
+        console.error('Failed to parse req.body.clientInfo', e);
+      }
     }
 
     Object.keys(req.body).forEach(key => {

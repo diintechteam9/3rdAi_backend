@@ -12,7 +12,7 @@ const socketMetadata = new Map();
 
 export const setupChatWebSocket = (server) => {
   console.log('\n🔧🔧🔧 [ChatWebSocket] Setting up Chat WebSocket server...\n');
-  
+
   const io = new Server(server, {
     path: '/socket.io/',
     cors: {
@@ -38,14 +38,14 @@ export const setupChatWebSocket = (server) => {
     console.log('   Transport:', socket.conn.transport.name);
     console.log('   URL:', socket.handshake.url);
     console.log('='.repeat(80));
-    
+
     try {
       console.log('\n📦 Query params:', JSON.stringify(socket.handshake.query, null, 2));
       console.log('📦 Auth object:', JSON.stringify(socket.handshake.auth, null, 2));
-      
+
       // Extract token - QUERY FIRST for WebSocket compatibility
       let token = null;
-      
+
       if (socket.handshake.query.token) {
         token = socket.handshake.query.token;
         console.log('✅ Token from QUERY');
@@ -56,13 +56,13 @@ export const setupChatWebSocket = (server) => {
         token = socket.handshake.headers.authorization.replace(/^Bearer\s+/i, '');
         console.log('✅ Token from HEADER');
       }
-      
+
       if (token) {
         token = token.trim();
         console.log('📏 Token length:', token.length);
         console.log('📏 Token parts:', token.split('.').length);
       }
-      
+
       if (!token) {
         console.error('❌ NO TOKEN FOUND');
         console.error('='.repeat(80) + '\n');
@@ -73,17 +73,17 @@ export const setupChatWebSocket = (server) => {
       const decoded = jwt.verify(token, JWT_SECRET);
       console.log('✅ Token verified');
       console.log('👤 Payload:', JSON.stringify(decoded, null, 2));
-      
+
       const userId = decoded.userId || decoded.partnerId;
       const userType = decoded.role;
-      
+
       let user;
       if (userType === 'partner') {
         user = await Partner.findById(userId);
       } else if (userType === 'user') {
         user = await User.findById(userId);
       }
-      
+
       if (!user) {
         console.error('❌ USER NOT FOUND IN DB');
         console.error('='.repeat(80) + '\n');
@@ -97,18 +97,18 @@ export const setupChatWebSocket = (server) => {
       console.log('✅ Authentication SUCCESS');
       console.log('   User:', user.email || user.name);
       console.log('='.repeat(80) + '\n');
-      
+
       next();
     } catch (error) {
       console.error('❌ Auth error:', error.message);
       console.error('='.repeat(80) + '\n');
-      
+
       if (error.name === 'JsonWebTokenError') {
         return next(new Error('Invalid token'));
       } else if (error.name === 'TokenExpiredError') {
         return next(new Error('Token expired'));
       }
-      
+
       next(new Error('Authentication failed'));
     }
   });
@@ -116,7 +116,7 @@ export const setupChatWebSocket = (server) => {
   // ============ CONNECTION HANDLER ============
   io.on('connection', async (socket) => {
     const { userId, userType, user } = socket;
-    
+
     console.log('\n🎉🎉🎉 CONNECTION ESTABLISHED 🎉🎉🎉');
     console.log('User:', user.email || user.name);
     console.log('Type:', userType);
@@ -152,7 +152,7 @@ export const setupChatWebSocket = (server) => {
     // ============ EVENT HANDLERS ============
     socket.on('conversation:join', async (data, callback) => {
       console.log(`📥 [${userType}] conversation:join`);
-      
+
       try {
         const { conversationId } = data;
 
@@ -198,7 +198,7 @@ export const setupChatWebSocket = (server) => {
 
     socket.on('message:send', async (data, callback) => {
       console.log(`📥 [${userType}] message:send`);
-      
+
       try {
         const { conversationId, content, messageType = 'text', mediaUrl = null } = data;
 
@@ -223,6 +223,7 @@ export const setupChatWebSocket = (server) => {
           senderModel,
           receiverId,
           receiverModel,
+          clientId: conversation.clientId,
           messageType,
           content,
           mediaUrl,

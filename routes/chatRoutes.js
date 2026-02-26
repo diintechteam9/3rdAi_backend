@@ -17,7 +17,7 @@ const router = express.Router();
 const authenticate = [
   authMiddleware,
   (req, res, next) => {
-    req.userId = req.user._id;
+    req.userId = req.user._id.toString();
     req.userType = req.user.role;
     next();
   }
@@ -198,7 +198,7 @@ router.get('/partners/:partnerId', authenticate, async (req, res) => {
 // @access  Private
 router.post('/conversations', authenticate, async (req, res) => {
   try {
-    const { partnerId, userId } = req.body;
+    const { partnerId, userId, aadhaarNumber } = req.body;
 
     // Validate request based on user type
     if (req.userType === 'user' && !partnerId) {
@@ -255,8 +255,10 @@ router.post('/conversations', authenticate, async (req, res) => {
       conversationId,
       partnerId: finalPartnerId,
       userId: finalUserId,
+      clientId: req.user.clientId,
       status: 'pending',
-      isAcceptedByPartner: false
+      isAcceptedByPartner: false,
+      aadhaarNumber: aadhaarNumber || null
     });
 
     await conversation.populate('partnerId', 'name email profilePicture specialization rating onlineStatus bio experience expertise languages qualifications location totalSessions completedSessions pricePerSession');

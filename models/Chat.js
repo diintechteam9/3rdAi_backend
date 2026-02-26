@@ -29,6 +29,12 @@ const chatSchema = new mongoose.Schema({
     required: false,
     index: true
   },
+  partnerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Partner',
+    required: false,
+    index: true
+  },
   title: {
     type: String,
     default: 'New Chat'

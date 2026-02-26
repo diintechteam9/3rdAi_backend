@@ -28,17 +28,15 @@ import chatRoutes from './routes/mobile/chat.js';
 import voiceRoutes from './routes/mobile/voice.js';
 import uploadRoutes from './routes/upload.js';
 import testimonialRoutes from './routes/testimonials/index.js';
-import reviewRoutes from './routes/reviews.js';
-import founderMessageRoutes from './routes/founderMessages/index.js';
-import brandAssetRoutes from './routes/brandAssets/index.js';
-import sponsorRoutes from './routes/sponsors.js';
-
-import notificationRoutes from './routes/notifications.js';
 import expertCategoryRoutes from './routes/expertCategories/index.js';
 import publicRoutes from './routes/public.js';
 
 // ============ NEW: Import Chat Routes ============
 import partnerUserChatRoutes from './routes/chatRoutes.js';
+
+// ============ Alerts & Announcements ============
+import alertRoutes from './routes/alerts.js';
+import announcementRoutes from './routes/announcements.js';
 
 // Import services
 import { initializeSuperAdmin } from './config/initSuperAdmin.js';
@@ -133,15 +131,13 @@ app.use('/api/upload', uploadRoutes);
 
 // Content Routes
 app.use('/api/testimonials', testimonialRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/sponsors', sponsorRoutes);
 
-app.use('/api/founder-messages', founderMessageRoutes);
-app.use('/api/brand-assets', brandAssetRoutes);
-
-app.use('/api/notifications', notificationRoutes);
 app.use('/api/expert-categories', expertCategoryRoutes);
 app.use('/api/public', publicRoutes);
+
+// ============ Alerts & Announcements ============
+app.use('/api/alerts', alertRoutes);
+app.use('/api/announcements', announcementRoutes);
 
 
 // Health check

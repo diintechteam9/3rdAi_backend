@@ -53,16 +53,16 @@ router.post('/', authenticate, async (req, res) => {
     // Allow both 'user' and 'client' roles
     const tokenRole = req.decodedRole;
 
-    if (tokenRole !== 'user' && tokenRole !== 'client') {
+    if (tokenRole !== 'user' && tokenRole !== 'client' && tokenRole !== 'partner') {
       console.error('[Chat POST] Access denied - Wrong role:', {
         tokenRole: tokenRole,
-        requiredRoles: ['user', 'client']
+        requiredRoles: ['user', 'client', 'partner']
       });
       return res.status(403).json({
         success: false,
-        message: `Access denied. This endpoint is only for 'user' or 'client' roles. Your current role is '${tokenRole}'.`,
+        message: `Access denied. This endpoint is only for 'user', 'client', or 'partner' roles. Your current role is '${tokenRole}'.`,
         error: 'INVALID_ROLE',
-        requiredRoles: ['user', 'client'],
+        requiredRoles: ['user', 'client', 'partner'],
         currentRole: tokenRole
       });
     }
@@ -80,6 +80,7 @@ router.post('/', authenticate, async (req, res) => {
     const chat = new Chat({
       userId: tokenRole === 'user' ? req.user._id : undefined,
       clientId: tokenRole === 'client' ? req.user._id : (req.clientId || req.user?.clientId || undefined),
+      partnerId: tokenRole === 'partner' ? req.user._id : undefined,
       title: title || 'New Chat',
       messages: []
     });
@@ -127,19 +128,19 @@ router.get('/', authenticate, async (req, res) => {
       requiredRole: 'user'
     });
 
-    // STRICT CHECK: Only 'user' or 'client' role allowed
-    if (tokenRole !== 'user' && tokenRole !== 'client') {
+    // STRICT CHECK: Only 'user', 'client', or 'partner' role allowed
+    if (tokenRole !== 'user' && tokenRole !== 'client' && tokenRole !== 'partner') {
       console.error('[Chat GET] Access denied - Wrong role:', {
         tokenRole: tokenRole,
-        requiredRoles: ['user', 'client'],
+        requiredRoles: ['user', 'client', 'partner'],
         userId: req.user?._id?.toString(),
-        message: `This endpoint requires 'user' or 'client' role. Current role: '${tokenRole}'`
+        message: `This endpoint requires 'user', 'client', or 'partner' role. Current role: '${tokenRole}'`
       });
       return res.status(403).json({
         success: false,
-        message: `Access denied. This endpoint is only for 'user' or 'client' roles. Your current role is '${tokenRole}'.`,
+        message: `Access denied. This endpoint is only for 'user', 'client', or 'partner' roles. Your current role is '${tokenRole}'.`,
         error: 'INVALID_ROLE',
-        requiredRoles: ['user', 'client'],
+        requiredRoles: ['user', 'client', 'partner'],
         currentRole: tokenRole
       });
     }
@@ -163,7 +164,9 @@ router.get('/', authenticate, async (req, res) => {
 
     const matchQuery = tokenRole === 'client'
       ? { clientId: req.user._id }
-      : { userId: req.user._id, ...req.tenantFilter };
+      : tokenRole === 'partner'
+        ? { partnerId: req.user._id }
+        : { userId: req.user._id, ...req.tenantFilter };
 
     const chats = await Chat.find(matchQuery)
       .select('_id title messages createdAt updatedAt')
@@ -207,16 +210,16 @@ router.get('/:chatId', authenticate, async (req, res) => {
     // Allow both 'user' and 'client' roles
     const tokenRole = req.decodedRole;
 
-    if (tokenRole !== 'user' && tokenRole !== 'client') {
+    if (tokenRole !== 'user' && tokenRole !== 'client' && tokenRole !== 'partner') {
       console.error('[Chat GET :chatId] Access denied - Wrong role:', {
         tokenRole: tokenRole,
-        requiredRoles: ['user', 'client']
+        requiredRoles: ['user', 'client', 'partner']
       });
       return res.status(403).json({
         success: false,
-        message: `Access denied. This endpoint is only for 'user' or 'client' roles. Your current role is '${tokenRole}'.`,
+        message: `Access denied. This endpoint is only for 'user', 'client', or 'partner' roles. Your current role is '${tokenRole}'.`,
         error: 'INVALID_ROLE',
-        requiredRoles: ['user', 'client'],
+        requiredRoles: ['user', 'client', 'partner'],
         currentRole: tokenRole
       });
     }
@@ -233,7 +236,9 @@ router.get('/:chatId', authenticate, async (req, res) => {
 
     const matchQuery = tokenRole === 'client'
       ? { _id: chatId, clientId: req.user._id }
-      : { _id: chatId, userId: req.user._id, ...req.tenantFilter };
+      : tokenRole === 'partner'
+        ? { _id: chatId, partnerId: req.user._id }
+        : { _id: chatId, userId: req.user._id, ...req.tenantFilter };
 
     const chat = await Chat.findOne(matchQuery);
 
@@ -274,16 +279,16 @@ router.post('/:chatId/message', authenticate, async (req, res) => {
     // Allow both 'user' and 'client' roles
     const tokenRole = req.decodedRole;
 
-    if (tokenRole !== 'user' && tokenRole !== 'client') {
+    if (tokenRole !== 'user' && tokenRole !== 'client' && tokenRole !== 'partner') {
       console.error('[Chat POST :chatId/message] Access denied - Wrong role:', {
         tokenRole: tokenRole,
-        requiredRoles: ['user', 'client']
+        requiredRoles: ['user', 'client', 'partner']
       });
       return res.status(403).json({
         success: false,
-        message: `Access denied. This endpoint is only for 'user' or 'client' roles. Your current role is '${tokenRole}'.`,
+        message: `Access denied. This endpoint is only for 'user', 'client', or 'partner' roles. Your current role is '${tokenRole}'.`,
         error: 'INVALID_ROLE',
-        requiredRoles: ['user', 'client'],
+        requiredRoles: ['user', 'client', 'partner'],
         currentRole: tokenRole
       });
     }
@@ -309,18 +314,22 @@ router.post('/:chatId/message', authenticate, async (req, res) => {
     // Find or create chat
     const matchQuery = tokenRole === 'client'
       ? { _id: chatId, clientId: req.user._id }
-      : { _id: chatId, userId: req.user._id, ...req.tenantFilter };
+      : tokenRole === 'partner'
+        ? { _id: chatId, partnerId: req.user._id }
+        : { _id: chatId, userId: req.user._id, ...req.tenantFilter };
 
     let chat = await Chat.findOne(matchQuery);
 
     const resolvedClientId = tokenRole === 'client' ? req.user._id : (req.clientId || req.user?.clientId || undefined);
     const resolvedUserId = tokenRole === 'user' ? req.user._id : undefined;
+    const resolvedPartnerId = tokenRole === 'partner' ? req.user._id : undefined;
 
     if (!chat && chatId !== 'new') {
       // Create new chat if chatId doesn't exist
       chat = new Chat({
         userId: resolvedUserId,
         clientId: resolvedClientId,
+        partnerId: resolvedPartnerId,
         title: message.substring(0, 50) || 'New Chat',
         messages: []
       });
@@ -329,6 +338,7 @@ router.post('/:chatId/message', authenticate, async (req, res) => {
       chat = new Chat({
         userId: resolvedUserId,
         clientId: resolvedClientId,
+        partnerId: resolvedPartnerId,
         title: message.substring(0, 50) || 'New Chat',
         messages: []
       });
@@ -425,16 +435,16 @@ router.delete('/:chatId', authenticate, async (req, res) => {
     // Allow both 'user' and 'client' roles
     const tokenRole = req.decodedRole;
 
-    if (tokenRole !== 'user' && tokenRole !== 'client') {
+    if (tokenRole !== 'user' && tokenRole !== 'client' && tokenRole !== 'partner') {
       console.error('[Chat DELETE :chatId] Access denied - Wrong role:', {
         tokenRole: tokenRole,
-        requiredRoles: ['user', 'client']
+        requiredRoles: ['user', 'client', 'partner']
       });
       return res.status(403).json({
         success: false,
-        message: `Access denied. This endpoint is only for 'user' or 'client' roles. Your current role is '${tokenRole}'.`,
+        message: `Access denied. This endpoint is only for 'user', 'client', or 'partner' roles. Your current role is '${tokenRole}'.`,
         error: 'INVALID_ROLE',
-        requiredRoles: ['user', 'client'],
+        requiredRoles: ['user', 'client', 'partner'],
         currentRole: tokenRole
       });
     }
@@ -451,7 +461,9 @@ router.delete('/:chatId', authenticate, async (req, res) => {
 
     const matchQuery = tokenRole === 'client'
       ? { _id: chatId, clientId: req.user._id }
-      : { _id: chatId, userId: req.user._id, ...req.tenantFilter };
+      : tokenRole === 'partner'
+        ? { _id: chatId, partnerId: req.user._id }
+        : { _id: chatId, userId: req.user._id, ...req.tenantFilter };
 
     const chat = await Chat.findOneAndDelete(matchQuery);
 

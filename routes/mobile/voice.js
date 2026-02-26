@@ -26,17 +26,17 @@ router.post('/start', authenticate, async (req, res) => {
     const tokenRole = req.decodedRole;
     console.log('[Voice POST /start] Token role:', tokenRole);
 
-    if (tokenRole !== 'user' && tokenRole !== 'client') {
+    if (tokenRole !== 'user' && tokenRole !== 'client' && tokenRole !== 'partner') {
       console.error('[Voice POST /start] Access denied - Wrong role:', {
         tokenRole: tokenRole,
-        requiredRoles: ['user', 'client'],
+        requiredRoles: ['user', 'client', 'partner'],
         userId: req.user?._id
       });
       return res.status(403).json({
         success: false,
-        message: `Access denied. This endpoint is only for 'user' or 'client' roles. Your current role is '${tokenRole}'.`,
+        message: `Access denied. This endpoint is only for 'user', 'client' or 'partner' roles. Your current role is '${tokenRole}'.`,
         error: 'INVALID_ROLE',
-        requiredRoles: ['user', 'client'],
+        requiredRoles: ['user', 'client', 'partner'],
         currentRole: tokenRole
       });
     }
@@ -134,17 +134,17 @@ router.post('/process', authenticate, async (req, res) => {
     const tokenRole = req.decodedRole;
     console.log('[Voice POST /process] Token role:', tokenRole);
 
-    if (tokenRole !== 'user' && tokenRole !== 'client') {
+    if (tokenRole !== 'user' && tokenRole !== 'client' && tokenRole !== 'partner') {
       console.error('[Voice POST /process] Access denied - Wrong role:', {
         tokenRole: tokenRole,
-        requiredRoles: ['user', 'client'],
+        requiredRoles: ['user', 'client', 'partner'],
         userId: req.user?._id
       });
       return res.status(403).json({
         success: false,
-        message: `Access denied. This endpoint is only for 'user' or 'client' roles. Your current role is '${tokenRole}'.`,
+        message: `Access denied. This endpoint is only for 'user', 'client' or 'partner' roles. Your current role is '${tokenRole}'.`,
         error: 'INVALID_ROLE',
-        requiredRoles: ['user', 'client'],
+        requiredRoles: ['user', 'client', 'partner'],
         currentRole: tokenRole
       });
     }
@@ -443,16 +443,16 @@ router.get('/stream', authenticate, async (req, res) => {
   // Allow both 'user' and 'client' roles
   const tokenRole = req.decodedRole;
 
-  if (tokenRole !== 'user' && tokenRole !== 'client') {
+  if (tokenRole !== 'user' && tokenRole !== 'client' && tokenRole !== 'partner') {
     console.error('[Voice GET /stream] Access denied - Wrong role:', {
       tokenRole: tokenRole,
-      requiredRoles: ['user', 'client']
+      requiredRoles: ['user', 'client', 'partner']
     });
     return res.status(403).json({
       success: false,
-      message: `Access denied. This endpoint is only for 'user' or 'client' roles. Your current role is '${tokenRole}'.`,
+      message: `Access denied. This endpoint is only for 'user', 'client' or 'partner' roles. Your current role is '${tokenRole}'.`,
       error: 'INVALID_ROLE',
-      requiredRoles: ['user', 'client'],
+      requiredRoles: ['user', 'client', 'partner'],
       currentRole: tokenRole
     });
   }

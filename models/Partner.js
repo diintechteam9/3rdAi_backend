@@ -75,10 +75,6 @@ const partnerSchema = new mongoose.Schema({
   },
 
   // Professional Information
-  specialization: {
-    type: [String],
-    default: []
-  },
   experience: {
     type: Number,
     default: 0
@@ -152,6 +148,14 @@ const partnerSchema = new mongoose.Schema({
 
   // Location Information
   location: {
+    area: {
+      type: String,
+      default: null
+    },
+    state: {
+      type: String,
+      default: null
+    },
     city: {
       type: String,
       default: null
@@ -374,7 +378,6 @@ partnerSchema.index({ email: 1 });
 partnerSchema.index({ isActive: 1, isVerified: 1 });
 partnerSchema.index({ onlineStatus: 1 });
 partnerSchema.index({ rating: -1, totalSessions: -1 });
-partnerSchema.index({ specialization: 1 });
 partnerSchema.index({ expertiseCategory: 1 });
 partnerSchema.index({ 'location.coordinates.latitude': 1, 'location.coordinates.longitude': 1 }); // For geospatial queries
 
