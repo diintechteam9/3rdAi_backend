@@ -8,7 +8,7 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['daily_reminder', 'streak_alert', 'completion', 'milestone'],
+    enum: ['daily_reminder', 'streak_alert', 'completion', 'milestone', 'case_update'],
     required: true
   },
   title: {
@@ -20,10 +20,8 @@ const notificationSchema = new mongoose.Schema({
     required: true
   },
   data: {
-    userSankalpId: mongoose.Schema.Types.ObjectId,
-    sankalpId: mongoose.Schema.Types.ObjectId,
-    streak: Number,
-    karmaEarned: Number
+    type: Object,
+    default: {}
   },
   isRead: {
     type: Boolean,

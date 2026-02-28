@@ -38,6 +38,15 @@ import partnerUserChatRoutes from './routes/chatRoutes.js';
 import alertRoutes from './routes/alerts.js';
 import announcementRoutes from './routes/announcements.js';
 
+// ============ Geo Features ============
+import areaRoutes from './routes/areas.js';
+import cameraRoutes from './routes/cameras.js';
+import caseRoutes from './routes/cases.js';
+
+// ============ Partner Multi-Step Registration ============
+import partnerRegisterRoutes from './routes/mobile/partnerRegister.js';
+
+
 // Import services
 import { initializeSuperAdmin } from './config/initSuperAdmin.js';
 import { setupVoiceAgentWebSocket } from './routes/mobile/voiceAgent.js';
@@ -122,6 +131,8 @@ app.use('/api/mobile/user', userProfileMobileRoutes);
 app.use('/api/mobile/chat', chatRoutes);
 app.use('/api/mobile/voice', voiceRoutes);
 app.use('/api/mobile/partner', partnerProfileMobileRoutes);
+app.use('/api/mobile/partner/register', partnerRegisterRoutes);
+
 app.use('/api/mobile/content', mobileContentRoutes);
 // Partner–User Chat (partners list, conversations, messages)
 app.use('/api/chat', partnerUserChatRoutes);
@@ -138,6 +149,11 @@ app.use('/api/public', publicRoutes);
 // ============ Alerts & Announcements ============
 app.use('/api/alerts', alertRoutes);
 app.use('/api/announcements', announcementRoutes);
+
+// ============ Geo Features ============
+app.use('/api/areas', areaRoutes);
+app.use('/api/cameras', cameraRoutes);
+app.use('/api/cases', caseRoutes);
 
 
 // Health check

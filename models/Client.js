@@ -26,56 +26,40 @@ const clientSchema = new mongoose.Schema({
     required: true,
     minlength: 6
   },
-  // Business Information
-  businessName: {
+  // Police Geo-Routing System Info
+  organizationName: {
     type: String,
+    required: true,
     trim: true
   },
-  websiteUrl: {
+  state: {
     type: String,
-    trim: true
-  },
-  gstNumber: {
-    type: String,
-    trim: true
-  },
-  panNumber: {
-    type: String,
-    trim: true
-  },
-  businessLogo: {
-    type: String,
-    trim: true
-  },
-  // Personal Information
-  fullName: {
-    type: String,
-    trim: true
-  },
-  mobileNumber: {
-    type: String,
-    trim: true
-  },
-  address: {
-    type: String,
+    required: true,
     trim: true
   },
   city: {
     type: String,
+    required: true,
     trim: true
   },
-  pincode: {
+  address: {
     type: String,
-    trim: true
-  },
-  // Legacy fields (keeping for backward compatibility)
-  businessType: {
-    type: String,
+    required: true,
     trim: true
   },
   contactNumber: {
     type: String,
+    required: true,
     trim: true
+  },
+  alternateContact: {
+    type: String,
+    trim: true
+  },
+  cityBoundary: {
+    type: String,
+    required: true,
+    enum: ['Delhi', 'Bangalore']
   },
   // Relationships
   createdBy: {
@@ -104,12 +88,12 @@ const clientSchema = new mongoose.Schema({
 });
 
 // Generate unique client ID BEFORE validation
-clientSchema.pre('validate', async function(next) {
+clientSchema.pre('validate', async function (next) {
   // Only generate clientId if it doesn't exist
   if (!this.clientId) {
     let unique = false;
     let generatedId;
-    
+
     // Keep trying until we get a unique ID
     while (!unique) {
       generatedId = `CLI-${nanoid()}`;
@@ -118,32 +102,32 @@ clientSchema.pre('validate', async function(next) {
         unique = true;
       }
     }
-    
+
     this.clientId = generatedId;
     console.log('Auto-generated clientId:', generatedId);
   }
-  
+
   next();
 });
 
 // Hash password before saving
-clientSchema.pre('save', async function(next) {
+clientSchema.pre('save', async function (next) {
   // Hash password only if it's modified
   if (this.isModified('password')) {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
   }
-  
+
   next();
 });
 
 // Compare password method
-clientSchema.methods.comparePassword = async function(candidatePassword) {
+clientSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
 // Remove password from JSON output
-clientSchema.methods.toJSON = function() {
+clientSchema.methods.toJSON = function () {
   const clientObject = this.toObject();
   delete clientObject.password;
   return clientObject;

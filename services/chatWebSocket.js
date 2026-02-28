@@ -4,16 +4,20 @@ import Message from '../models/Message.js';
 import Conversation from '../models/Conversation.js';
 import Partner from '../models/Partner.js';
 import User from '../models/User.js';
+import Client from '../models/Client.js';
+import Admin from '../models/Admin.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
 const activeConnections = new Map();
 const socketMetadata = new Map();
 
+export let io;
+
 export const setupChatWebSocket = (server) => {
   console.log('\n🔧🔧🔧 [ChatWebSocket] Setting up Chat WebSocket server...\n');
 
-  const io = new Server(server, {
+  io = new Server(server, {
     path: '/socket.io/',
     cors: {
       origin: (origin, callback) => {
@@ -82,6 +86,10 @@ export const setupChatWebSocket = (server) => {
         user = await Partner.findById(userId);
       } else if (userType === 'user') {
         user = await User.findById(userId);
+      } else if (userType === 'client') {
+        user = await Client.findById(userId);
+      } else if (userType === 'admin' || userType === 'super_admin') {
+        user = await Admin.findById(userId);
       }
 
       if (!user) {

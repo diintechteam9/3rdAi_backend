@@ -122,6 +122,19 @@ const partnerSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Multi-step registration tracker: 0=started, 1=email verified, 2=phone verified, 3=profile complete
+  registrationStep: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 3,
+  },
+  authMethod: {
+    type: String,
+    enum: ['password', 'google'],
+    default: 'password',
+  },
+
   skills: {
     type: [String],
     default: [], // Max 5 skills from predefined list
