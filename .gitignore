@@ -7,3 +7,10 @@ output.txt
 output*.log
 dist/
 .DS_Store
+
+# Debug & temp files
+*_debug.json
+*_deva.json
+latest_*.json
+tmp_*.js
+test_*.js
