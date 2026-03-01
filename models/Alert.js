@@ -94,12 +94,10 @@ const alertSchema = new mongoose.Schema(
         location: {
             type: {
                 type: String,
-                enum: ['Point'],
-                default: 'Point'
+                enum: ['Point']
             },
             coordinates: {
-                type: [Number], // [longitude, latitude]
-                default: undefined
+                type: [Number] // [longitude, latitude]
             }
         },
         // Area polygon that matched the GPS point

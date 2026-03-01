@@ -311,9 +311,28 @@ router.post('/user', authenticate, async (req, res) => {
                 resolvedClientId = matchedArea.clientId || resolvedClientId;
                 assignedPartnerId = matchedArea.partnerId || null;
                 routedAreaId = matchedArea._id;
-                console.log(`[GeoRouting] Case → Area: "${matchedArea.name}" | Partner: ${assignedPartnerId || 'unassigned'}`);
+                console.log(`[GeoRouting] Exact Match → Area: "${matchedArea.name}" | Partner: ${assignedPartnerId || 'unassigned'}`);
             } else {
-                console.warn('[GeoRouting] No area matched GPS point, falling back to user clientId');
+                // ── FALLBACK: NEAREST AREA ──────────────────────────────────
+                // If point is not inside any polygon, find the nearest area within 100km
+                console.log('[GeoRouting] No exact area match. Hunting for nearest area...');
+                const nearestArea = await Area.findOne({
+                    boundary: {
+                        $near: {
+                            $geometry: locationPoint,
+                            $maxDistance: 100000 // 100km limit
+                        }
+                    }
+                }).lean();
+
+                if (nearestArea) {
+                    resolvedClientId = nearestArea.clientId || resolvedClientId;
+                    assignedPartnerId = nearestArea.partnerId || null;
+                    routedAreaId = nearestArea._id;
+                    console.log(`[GeoRouting] Nearest Match → Area: "${nearestArea.name}" | Partner: ${assignedPartnerId || 'unassigned'}`);
+                } else {
+                    console.warn('[GeoRouting] No area matched GPS point even within 100km');
+                }
             }
         }
 
@@ -446,17 +465,23 @@ router.get('/partner', authenticate, async (req, res) => {
         const clientId = req.user.clientId?._id || req.user.clientId;
         const clientObjId = clientId ? new mongoose.Types.ObjectId(clientId.toString()) : null;
 
-        // PRIMARY FILTER: cases where this partner is the assigned responder
-        // This is the geo-routing result — only see YOUR cases, not all client cases
-        const base = { assignedPartnerId: partnerObjId };
+        // Filter based on type (default to USER/Citizen Reports)
+        const requestedType = type || 'USER';
 
-        // Optional: also include unassigned cases from same client (control-room mode)
-        // Activated by ?includeUnassigned=true
-        const matchExpr = (includeUnassigned === 'true' && clientObjId)
-            ? { $or: [{ assignedPartnerId: partnerObjId }, { clientId: clientObjId, assignedPartnerId: null }] }
-            : base;
+        // Define base match criteria
+        let matchExpr;
+        if (requestedType === 'CLIENT') {
+            // Device Alerts: Partners see all alerts from their client/company
+            matchExpr = { clientId: clientObjId };
+        } else {
+            // Citizen Reports: Partners usually only see their assigned cases (geo-routed)
+            const baseMatch = { assignedPartnerId: partnerObjId };
+            matchExpr = (includeUnassigned === 'true' && clientObjId)
+                ? { $or: [{ assignedPartnerId: partnerObjId }, { clientId: clientObjId, assignedPartnerId: null }] }
+                : baseMatch;
+        }
 
-        const filter = { ...matchExpr, type: 'USER' };
+        const filter = { ...matchExpr, type: requestedType };
         if (status) filter.status = status;
         if (priority) filter.priority = priority;
 
@@ -469,12 +494,12 @@ router.get('/partner', authenticate, async (req, res) => {
             Alert.countDocuments(filter),
             Alert.countDocuments({
                 ...matchExpr,
-                type: 'USER',
+                type: requestedType,
                 createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
             }),
-            // Status counts for THIS partner's cases only
+            // Status counts for THIS specific view (Device or Citizen)
             Alert.aggregate([
-                { $match: { assignedPartnerId: partnerObjId, type: 'USER' } },
+                { $match: { ...matchExpr, type: requestedType } },
                 { $group: { _id: '$status', count: { $sum: 1 } } }
             ])
         ]);

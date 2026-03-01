@@ -66,16 +66,24 @@ router.post('/register', upload.single('profileImage'), async (req, res) => {
     // Create new partner — verificationStatus defaults to 'pending', isVerified: false
     const partner = new Partner({
       name,
-      email,
+      email: email.toLowerCase(),
       password,
       designation,
       phone,
       policeId,
+      policeStation: area, // Use area as station
       experience: Number(experience) || 0,
-      location: { area, state },
+      location: {
+        area,
+        state,
+        city: 'Delhi', // Default for now
+        country: 'India'
+      },
       clientId: clientDoc._id,
       verificationStatus: 'pending',
+      registrationStep: 3, // For mobile sync
       isVerified: false,
+      isActive: false, // Default until approved
       ...(profilePictureUrl && { profilePicture: profilePictureUrl, profilePictureKey })
     });
 
@@ -339,11 +347,25 @@ router.patch('/:partnerId/approve', authenticate, async (req, res) => {
     partner.isVerified = true;
     partner.verifiedAt = new Date();
     partner.verifiedBy = req.user._id;
+    partner.isActive = true; // Ensure partner is active upon approval
     await partner.save();
+
+    // ── AUTO-LINK PARTNER TO AREA ───────────────────────────────────────
+    // If the partner registered with a specific area, link them to the Area doc
+    // so that geo-routing can find them.
+    const partnerAreaName = partner.location?.area;
+    if (partnerAreaName) {
+      console.log(`[Approval] Linking partner ${partner.name} to area "${partnerAreaName}"`);
+      const Area = mongoose.model('Area');
+      await Area.updateMany(
+        { name: partnerAreaName, clientId: partner.clientId },
+        { partnerId: partner._id }
+      );
+    }
 
     res.json({
       success: true,
-      message: `Partner ${partner.name} approved successfully`,
+      message: `Partner ${partner.name} approved and linked to area successfully`,
       data: { partnerId: partner._id, verificationStatus: 'approved' }
     });
   } catch (error) {
