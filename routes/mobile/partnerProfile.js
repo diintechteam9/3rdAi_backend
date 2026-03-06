@@ -244,9 +244,14 @@ router.post('/check-email', async (req, res) => {
  * POST /api/mobile/partner/login
  * Body: { email, password }
  */
-router.post('/login', async (req, res) => {
+router.post('/login/:clientId', async (req, res) => {
   try {
+    const { clientId: urlClientId } = req.params;
     const { email, password, clientId: clientCode } = req.body;
+
+    if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+      return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+    }
 
     if (!email || !password) {
       return res.status(400).json({

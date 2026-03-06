@@ -6,9 +6,14 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const router = express.Router();
 
-router.post('/google', async (req, res) => {
+router.post('/google/:clientId', async (req, res) => {
   try {
+    const { clientId: urlClientId } = req.params;
     const { idToken, clientId: clientCode } = req.body;
+
+    if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+      return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+    }
 
     if (!clientCode) {
       return res.status(400).json({ success: false, message: 'Client ID is required' });
@@ -133,9 +138,14 @@ router.post('/google', async (req, res) => {
 });
 
 // User Login
-router.post('/login', async (req, res) => {
+router.post('/login/:clientId', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { clientId: urlClientId } = req.params;
+    const { email, password, clientId: clientCode } = req.body;
+
+    if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+      return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+    }
 
     if (!email || !password) {
       return res.status(400).json({
@@ -218,9 +228,14 @@ router.post('/login', async (req, res) => {
 });
 
 // User Registration
-router.post('/register', async (req, res) => {
+router.post('/register/:clientId', async (req, res) => {
   try {
+    const { clientId: urlClientId } = req.params;
     const { email, password, profile, clientId: clientCode } = req.body;
+
+    if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+      return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+    }
 
     if (!email || !password || !clientCode) {
       return res.status(400).json({

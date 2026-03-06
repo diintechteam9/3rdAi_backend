@@ -58,9 +58,14 @@ async function resolveClient(clientCode) {
 // STEP 1 — Send Email OTP
 // Body: { email, password, clientId }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/step1', async (req, res) => {
+router.post('/step1/:clientId', async (req, res) => {
     try {
+        const { clientId: urlClientId } = req.params;
         const { email, password, clientId: clientCode } = req.body;
+
+        if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+            return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+        }
 
         if (!email || !password) {
             return res.status(400).json({ success: false, message: 'Email and password are required' });
@@ -119,9 +124,14 @@ router.post('/step1', async (req, res) => {
 // STEP 1 VERIFY — Verify Email OTP
 // Body: { email, otp, clientId }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/step1/verify', async (req, res) => {
+router.post('/step1/verify/:clientId', async (req, res) => {
     try {
+        const { clientId: urlClientId } = req.params;
         const { email, otp, clientId: clientCode } = req.body;
+
+        if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+            return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+        }
         if (!email || !otp) {
             return res.status(400).json({ success: false, message: 'Email and OTP are required' });
         }
@@ -159,9 +169,14 @@ router.post('/step1/verify', async (req, res) => {
 // STEP 1 — Resend Email OTP
 // Body: { email, clientId }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/resend-email-otp', async (req, res) => {
+router.post('/resend-email-otp/:clientId', async (req, res) => {
     try {
+        const { clientId: urlClientId } = req.params;
         const { email, clientId: clientCode } = req.body;
+
+        if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+            return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+        }
         if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
 
         const clientDoc = await resolveClient(clientCode);
@@ -188,9 +203,14 @@ router.post('/resend-email-otp', async (req, res) => {
 // STEP 1 GOOGLE — Google Sign-In (replace email OTP with Google)
 // Body: { credential, clientId }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/step1/google', async (req, res) => {
+router.post('/step1/google/:clientId', async (req, res) => {
     try {
+        const { clientId: urlClientId } = req.params;
         const { credential, clientId: clientCode } = req.body;
+
+        if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+            return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+        }
         if (!credential) {
             return res.status(400).json({ success: false, message: 'Google credential is required' });
         }
@@ -273,9 +293,14 @@ router.post('/step1/google', async (req, res) => {
 // STEP 2 — Send Phone OTP
 // Body: { email, phone, otpMethod: 'twilio'|'gupshup'|'whatsapp', clientId }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/step2', async (req, res) => {
+router.post('/step2/:clientId', async (req, res) => {
     try {
+        const { clientId: urlClientId } = req.params;
         const { email, phone, otpMethod = 'gupshup', clientId: clientCode } = req.body;
+
+        if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+            return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+        }
         if (!phone) {
             return res.status(400).json({ success: false, message: 'Phone number is required' });
         }
@@ -324,9 +349,14 @@ router.post('/step2', async (req, res) => {
 // STEP 2 VERIFY — Verify Phone OTP
 // Body: { email, otp, clientId }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/step2/verify', async (req, res) => {
+router.post('/step2/verify/:clientId', async (req, res) => {
     try {
+        const { clientId: urlClientId } = req.params;
         const { email, otp, clientId: clientCode } = req.body;
+
+        if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+            return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+        }
         if (!email || !otp) {
             return res.status(400).json({ success: false, message: 'Email and OTP are required' });
         }
@@ -364,9 +394,14 @@ router.post('/step2/verify', async (req, res) => {
 // STEP 2 — Resend Phone OTP
 // Body: { email, otpMethod, clientId }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/step2/resend', async (req, res) => {
+router.post('/step2/resend/:clientId', async (req, res) => {
     try {
+        const { clientId: urlClientId } = req.params;
         const { email, otpMethod = 'gupshup', clientId: clientCode } = req.body;
+
+        if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+            return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+        }
         if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
 
         const clientDoc = await resolveClient(clientCode);
@@ -394,9 +429,14 @@ router.post('/step2/resend', async (req, res) => {
 // STEP 3 — Profile Details
 // Body: { email, clientId, name, designation, area, state, policeId, experience }
 // ─────────────────────────────────────────────────────────────────────────────
-router.post('/step3', async (req, res) => {
+router.post('/step3/:clientId', async (req, res) => {
     try {
+        const { clientId: urlClientId } = req.params;
         const { email, clientId: clientCode, name, designation, area, state, policeId, experience } = req.body;
+
+        if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+            return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+        }
 
         if (!email) return res.status(400).json({ success: false, message: 'Email is required' });
         if (!name || !designation || !area || !state || !policeId) {

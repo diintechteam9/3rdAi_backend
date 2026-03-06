@@ -435,9 +435,14 @@ router.post('/login/firebase', async (req, res) => {
  * POST /api/mobile/user/register/step1
  * Body: { email, password, clientId }
  */
-router.post('/register/step1', async (req, res) => {
+router.post('/register/step1/:clientId', async (req, res) => {
   try {
+    const { clientId: urlClientId } = req.params;
     const { email, password, clientId: clientCode } = req.body;
+
+    if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+      return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+    }
 
     if (!email) {
       return res.status(400).json({
@@ -520,9 +525,14 @@ router.post('/register/step1', async (req, res) => {
  * POST /api/mobile/user/register/step1/verify
  * Body: { email, otp, clientId }
  */
-router.post('/register/step1/verify', async (req, res) => {
+router.post('/register/step1/verify/:clientId', async (req, res) => {
   try {
+    const { clientId: urlClientId } = req.params;
     const { email, otp, clientId: clientCode } = req.body;
+
+    if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+      return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+    }
 
     if (!email || !otp) {
       return res.status(400).json({
@@ -586,9 +596,14 @@ router.post('/register/step1/verify', async (req, res) => {
  * POST /api/mobile/user/register/step2
  * Body: { email, mobile, otpMethod: 'twilio' | 'gupshup' | 'whatsapp', clientId }
  */
-router.post('/register/step2', async (req, res) => {
+router.post('/register/step2/:clientId', async (req, res) => {
   try {
+    const { clientId: urlClientId } = req.params;
     const { email, mobile, otpMethod, clientId: clientCode } = req.body;
+
+    if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+      return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+    }
 
     if (!mobile) {
       return res.status(400).json({
@@ -711,9 +726,14 @@ router.post('/register/step2', async (req, res) => {
  * POST /api/mobile/user/register/step2/verify
  * Body: { email, mobile, otp, clientId }
  */
-router.post('/register/step2/verify', async (req, res) => {
+router.post('/register/step2/verify/:clientId', async (req, res) => {
   try {
+    const { clientId: urlClientId } = req.params;
     const { email, mobile, otp, clientId: clientCode } = req.body;
+
+    if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+      return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+    }
 
     if (!otp || (!email && !mobile)) {
       return res.status(400).json({
@@ -802,8 +822,9 @@ router.post('/register/step2/verify', async (req, res) => {
  *   serviceId (optional)
  * }
  */
-router.post('/register/step3', async (req, res) => {
+router.post('/register/step3/:clientId', async (req, res) => {
   try {
+    const { clientId: urlClientId } = req.params;
     const {
       email,
       clientId: clientCode,
@@ -811,6 +832,10 @@ router.post('/register/step3', async (req, res) => {
       policeStation,
       serviceId
     } = req.body;
+
+    if (!urlClientId || !clientCode || urlClientId !== clientCode) {
+      return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
+    }
 
     const { mobile } = req.body;
 
