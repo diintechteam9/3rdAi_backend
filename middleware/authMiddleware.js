@@ -173,8 +173,9 @@ export const authenticate = async (req, res, next) => {
       });
     }
 
-    // Check if user is active
-    if (user.isActive === false) {
+    // ✅ isActive check: partner ko exempt karo — registration ke waqt isActive=false hota hai (pending approval)
+    // Baaki sabhi roles ke liye isActive=true zaroori hai
+    if (user.isActive === false && userRole !== 'partner') {
       return res.status(401).json({
         success: false,
         message: 'User account is inactive. Please contact support.'

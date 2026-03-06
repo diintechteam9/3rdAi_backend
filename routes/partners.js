@@ -5,6 +5,7 @@ import { OAuth2Client } from 'google-auth-library';
 import Partner from '../models/Partner.js';
 import { generateToken, authenticate } from '../middleware/authMiddleware.js';
 import Client from '../models/Client.js';
+import Area from '../models/Area.js';
 import { uploadToS3, getobject } from '../utils/s3.js';
 
 const router = express.Router();
@@ -213,6 +214,7 @@ router.post('/login', async (req, res) => {
 
 // @route   GET /api/partners/approval-status
 // @desc    Check partner's approval status (for waiting screen polling)
+//          If approved, returns a JWT token so the partner can skip re-login.
 // @access  Public (by email)
 router.get('/approval-status', async (req, res) => {
   try {
@@ -222,21 +224,43 @@ router.get('/approval-status', async (req, res) => {
     }
 
     const partner = await Partner.findOne({ email: email.toLowerCase() })
-      .select('name email verificationStatus isVerified blockedReason');
+      .select('name email phone profilePicture profilePictureKey designation location verificationStatus isVerified isActive blockedReason clientId');
 
     if (!partner) {
       return res.status(404).json({ success: false, message: 'Partner not found' });
     }
 
-    res.json({
-      success: true,
-      data: {
-        verificationStatus: partner.verificationStatus,
-        isVerified: partner.isVerified,
-        blockedReason: partner.blockedReason || null,
-        name: partner.name
+    const responseData = {
+      verificationStatus: partner.verificationStatus,
+      isVerified: partner.isVerified,
+      blockedReason: partner.blockedReason || null,
+      name: partner.name
+    };
+
+    // ✅ Agar approved hai toh JWT token bhi do — frontend dobara login nahi maangega
+    if (partner.verificationStatus === 'approved' && partner.isActive) {
+      const token = generateToken(partner._id, 'partner', partner.clientId);
+
+      // Profile picture URL resolve karo
+      let profilePicture = partner.profilePicture || null;
+      if (partner.profilePictureKey) {
+        try { profilePicture = await getobject(partner.profilePictureKey); } catch (_) { }
       }
-    });
+
+      responseData.token = token;
+      responseData.partner = {
+        id: partner._id,
+        name: partner.name,
+        email: partner.email,
+        phone: partner.phone || null,
+        designation: partner.designation || null,
+        profilePicture,
+        verificationStatus: partner.verificationStatus,
+        isVerified: partner.isVerified
+      };
+    }
+
+    res.json({ success: true, data: responseData });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -356,11 +380,11 @@ router.patch('/:partnerId/approve', authenticate, async (req, res) => {
     const partnerAreaName = partner.location?.area;
     if (partnerAreaName) {
       console.log(`[Approval] Linking partner ${partner.name} to area "${partnerAreaName}"`);
-      const Area = mongoose.model('Area');
-      await Area.updateMany(
+      const updateResult = await Area.updateMany(
         { name: partnerAreaName, clientId: partner.clientId },
         { partnerId: partner._id }
       );
+      console.log(`[Approval] Area link result: matched=${updateResult.matchedCount}, updated=${updateResult.modifiedCount}`);
     }
 
     res.json({

@@ -11,11 +11,11 @@ export const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.header('Authorization');
     const token = authHeader?.replace('Bearer ', '');
-    
+
     if (!token) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'No token provided. Authentication required.' 
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided. Authentication required.'
       });
     }
 
@@ -25,7 +25,7 @@ export const authenticate = async (req, res, next) => {
     } catch (verifyError) {
       throw verifyError;
     }
-    
+
     // Determine model based on role in token
     let user = null;
     if (decoded.role === 'super_admin' || decoded.role === 'admin') {
@@ -56,7 +56,7 @@ export const authenticate = async (req, res, next) => {
         // Convert to plain object to ensure role is preserved
         user = user.toObject ? user.toObject() : user;
         user.role = 'user'; // Set role again after conversion
-        
+
         // Add clientId from token for backward compatibility
         if (decoded.clientId) {
           user.tokenClientId = decoded.clientId;
@@ -68,13 +68,13 @@ export const authenticate = async (req, res, next) => {
         user = await Partner.findById(partnerId).select('-password');
         if (user) {
           user.role = 'partner';
-          if (!user.isActive) {
-            user = null;
-          }
+          // ✅ Registration phase: isActive=false partner ko step4 (image upload) allow karo.
+          // Dashboard access guard alag jagah hai (PartnerDashboard route check karta hai).
+          // Isliye yahan isActive=false pe null mat karo — registration complete hone do.
         }
       }
     }
-    
+
     console.log('[Auth Middleware] User found:', {
       userId: user?._id,
       role: user?.role,
@@ -82,18 +82,20 @@ export const authenticate = async (req, res, next) => {
       clientId: user?.role === 'client' ? user?.clientId : (user?.clientId?._id || user?.tokenClientId),
       isActive: user?.isActive
     });
-    
+
     if (!user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not found.' 
+      return res.status(401).json({
+        success: false,
+        message: 'User not found.'
       });
     }
 
-    if (!user.isActive) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User account is inactive.' 
+    // ✅ isActive check: partner ko exempt karo kyunki registration ke waqt partner isActive=false hota hai.
+    // Baaki sabhi roles (admin, client, user) ke liye isActive=true zaroori hai.
+    if (!user.isActive && user.role !== 'partner') {
+      return res.status(401).json({
+        success: false,
+        message: 'User account is inactive.'
       });
     }
 
@@ -122,8 +124,8 @@ export const authenticate = async (req, res, next) => {
     req.user = user;
     next();
   } catch (error) {
-    res.status(401).json({ 
-      success: false, 
+    res.status(401).json({
+      success: false,
       message: 'Invalid or expired token.',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
@@ -134,9 +136,9 @@ export const authenticate = async (req, res, next) => {
 export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Authentication required.' 
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required.'
       });
     }
 
@@ -150,9 +152,9 @@ export const authorize = (...roles) => {
     });
 
     if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Access denied. Insufficient permissions.' 
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Insufficient permissions.'
       });
     }
 
@@ -160,15 +162,15 @@ export const authorize = (...roles) => {
   };
 };
 
-// Generate JWT token with clientId for users
+// Generate JWT token with clientId for users and partners
 export const generateToken = (userId, role, clientId = null) => {
   const payload = { userId, role };
-  
-  // Add clientId to token for users
-  if (role === 'user' && clientId) {
+
+  // ✅ clientId ko user aur partner dono ke liye token mein rakho
+  if (clientId) {
     payload.clientId = clientId;
   }
-  
+
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
 };
 
