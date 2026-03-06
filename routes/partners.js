@@ -193,10 +193,7 @@ router.post('/login', async (req, res) => {
           name: partner.name,
           email: partner.email,
           phone: partner.phone,
-          specialization: partner.specialization,
           profilePicture: partner.profilePicture,
-          rating: partner.rating,
-          totalSessions: partner.totalSessions,
           isVerified: partner.isVerified,
           verificationStatus: partner.verificationStatus
         },
@@ -491,10 +488,7 @@ router.post('/google-login', async (req, res) => {
           name: partner.name,
           email: partner.email,
           phone: partner.phone,
-          specialization: partner.specialization,
           profilePicture: partner.profilePicture,
-          rating: partner.rating,
-          totalSessions: partner.totalSessions,
           isVerified: partner.isVerified
         },
         token
@@ -524,7 +518,11 @@ router.get('/profile', async (req, res) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const partnerId = decoded.userId || decoded.id || decoded.partnerId;
-    const partner = await Partner.findById(partnerId).select('-password');
+
+    // Sirf zaroori fields select kar rahe hain
+    const partner = await Partner.findById(partnerId).select(
+      'name email phone designation policeId policeStation experience location profilePicture profilePictureKey verificationStatus isVerified isActive'
+    );
 
     if (!partner) {
       return res.status(404).json({
@@ -602,21 +600,12 @@ router.put('/profile', upload.single('profileImage'), async (req, res) => {
 
     // List of allowed fields to update
     const allowedUpdates = [
-      'name', 'phone', 'bio', 'designation', 'policeId', 'policeStation',
-      'experience', 'skills', 'languages', 'socialMedia'
+      'name', 'phone', 'designation', 'policeId', 'policeStation', 'experience'
     ];
 
     allowedUpdates.forEach(field => {
-      // For objects like socialMedia, we might need to parse if it comes as JSON string from FormData
       if (req.body[field] !== undefined) {
-        try {
-          // Attempt to parse JSON strings back to objects/arrays (useful for skills, languages, socialMedia from FormData)
-          const parsed = JSON.parse(req.body[field]);
-          partner[field] = parsed;
-        } catch (e) {
-          // If not JSON, just assign the value directly
-          partner[field] = req.body[field];
-        }
+        partner[field] = req.body[field];
       }
     });
 

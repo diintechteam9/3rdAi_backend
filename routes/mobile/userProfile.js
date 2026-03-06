@@ -819,7 +819,7 @@ router.post('/register/step2/verify/:clientId', async (req, res) => {
  *   clientId (required),
  *   name (optional),
  *   policeStation (optional),
- *   serviceId (optional)
+ *   address (optional)
  * }
  */
 router.post('/register/step3/:clientId', async (req, res) => {
@@ -830,7 +830,7 @@ router.post('/register/step3/:clientId', async (req, res) => {
       clientId: clientCode,
       name,
       policeStation,
-      serviceId
+      address
     } = req.body;
 
     if (!urlClientId || !clientCode || urlClientId !== clientCode) {
@@ -879,7 +879,7 @@ router.post('/register/step3/:clientId', async (req, res) => {
 
     if (name) user.profile.name = name;
     if (policeStation) user.profile.policeStation = policeStation;
-    if (serviceId) user.profile.serviceId = serviceId;
+    if (address) user.profile.address = address;
 
     // Mark registration as complete
     user.registrationStep = 3;
@@ -1240,7 +1240,7 @@ router.get('/profile', authenticate, async (req, res) => {
 
     const user = await User.findById(req.user._id)
       .select('-password')
-      .populate('clientId', 'clientId businessName email');
+      .populate('clientId', 'clientId organizationName businessName fullName city state email');
 
     if (!user) {
       return res.status(404).json({
@@ -1271,7 +1271,10 @@ router.get('/profile', authenticate, async (req, res) => {
       success: true,
       data: {
         user: { ...userData, role: 'user' },
-        token
+        token,
+        clientId: user.clientId?.clientId || null,
+        clientName: user.clientId?.organizationName || user.clientId?.businessName || user.clientId?.fullName || null,
+        organizationName: user.clientId?.organizationName || user.clientId?.businessName || user.clientId?.fullName || null
       }
     });
   } catch (error) {

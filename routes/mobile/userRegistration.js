@@ -30,7 +30,7 @@ const upload = multer({
  */
 router.post('/register-with-image', upload.single('image'), async (req, res) => {
   try {
-    const { email, password, name, dob, timeOfBirth, placeOfBirth, gowthra, profession, clientId } = req.body;
+    const { email, password, name, dob, address, profession, clientId } = req.body;
     const imageFile = req.file;
 
     if (!email || !password || !clientId) {
@@ -101,9 +101,7 @@ router.post('/register-with-image', upload.single('image'), async (req, res) => 
       profile: {
         name: name || '',
         dob: dob ? new Date(dob) : undefined,
-        timeOfBirth: timeOfBirth || '',
-        placeOfBirth: placeOfBirth || '',
-        gowthra: gowthra || '',
+        address: address || '',
         profession: profession || undefined,
       },
       credits: 1000, // signup bonus for mobile registration

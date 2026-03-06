@@ -50,7 +50,7 @@ export const authenticate = async (req, res, next) => {
     } else if (decoded.role === 'user') {
       user = await User.findById(decoded.userId)
         .select('-password')
-        .populate('clientId', 'clientId businessName email');
+        .populate('clientId', 'clientId organizationName businessName fullName city state email');
       if (user) {
         user.role = 'user'; // Ensure role is set
         // Convert to plain object to ensure role is preserved
@@ -65,7 +65,9 @@ export const authenticate = async (req, res, next) => {
     } else if (decoded.role === 'partner') {
       const partnerId = decoded.partnerId || decoded.userId;
       if (partnerId) {
-        user = await Partner.findById(partnerId).select('-password');
+        user = await Partner.findById(partnerId)
+          .select('-password')
+          .populate('clientId', 'clientId organizationName businessName fullName city state email');
         if (user) {
           user.role = 'partner';
           // ✅ Registration phase: isActive=false partner ko step4 (image upload) allow karo.

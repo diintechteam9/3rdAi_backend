@@ -15,13 +15,15 @@ const partnerSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  // Optional category (compatible with ExpertCategory usage)
-  categoryId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'ExpertCategory',
-    default: null,
-    index: true
-  },
+  /*
+    // Optional category (compatible with ExpertCategory usage)
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ExpertCategory',
+      default: null,
+      index: true
+    },
+  */
   email: {
     type: String,
 
@@ -79,49 +81,53 @@ const partnerSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  experienceRange: {
-    type: String,
-    enum: ['0-2', '3-5', '6-10', '10+'],
-    default: null
-  },
-  expertise: {
-    type: [String],
-    default: [] // e.g., ['Vedic Astrology', 'Tarot Reading', 'Numerology']
-  },
-  expertiseCategory: {
-    type: String,
-    enum: ['Astrology', 'Vastu', 'Reiki', 'Healer', 'Numerology', 'Others'],
-    default: null
-  },
-  emailOtp: {
-    type: String,
-    default: null
-  },
-  emailOtpExpiry: {
-    type: Date,
-    default: null
-  },
-  phoneOtp: {
-    type: String,
-    default: null
-  },
-  phoneOtpExpiry: {
-    type: Date,
-    default: null
-  },
-  phoneOtpMethod: {
-    type: String,
-    enum: ['email', 'sms', 'whatsapp', 'gupshup', 'twilio'],
-    default: null
-  },
-  emailVerified: {
-    type: Boolean,
-    default: false
-  },
-  phoneVerified: {
-    type: Boolean,
-    default: false
-  },
+  /*
+    experienceRange: {
+      type: String,
+      enum: ['0-2', '3-5', '6-10', '10+'],
+      default: null
+    },
+    expertise: {
+      type: [String],
+      default: [] // e.g., ['Vedic Astrology', 'Tarot Reading', 'Numerology']
+    },
+    expertiseCategory: {
+      type: String,
+      enum: ['Astrology', 'Vastu', 'Reiki', 'Healer', 'Numerology', 'Others'],
+      default: null
+    },
+    emailOtp: {
+      type: String,
+      default: null
+    },
+    emailOtpExpiry: {
+      type: Date,
+      default: null
+    },
+    phoneOtp: {
+      type: String,
+      default: null
+    },
+    phoneOtpExpiry: {
+      type: Date,
+      default: null
+    },
+    phoneOtpMethod: {
+      type: String,
+      enum: ['email', 'sms', 'whatsapp', 'gupshup', 'twilio'],
+      default: null
+    },
+  */
+  /*
+    emailVerified: {
+      type: Boolean,
+      default: false
+    },
+    phoneVerified: {
+      type: Boolean,
+      default: false
+    },
+  */
   // Multi-step registration tracker: 0=started, 1=email verified, 2=phone verified, 3=profile complete
   registrationStep: {
     type: Number,
@@ -135,29 +141,31 @@ const partnerSchema = new mongoose.Schema({
     default: 'password',
   },
 
-  skills: {
-    type: [String],
-    default: [], // Max 5 skills from predefined list
-    validate: {
-      validator: function (arr) {
-        return arr.length <= 5;
-      },
-      message: 'Maximum 5 skills allowed'
-    }
-  },
-  languages: {
-    type: [String],
-    default: [] // e.g., ['English', 'Hindi', 'Telugu']
-  },
-  qualifications: {
-    type: [String],
-    default: []
-  },
-  consultationModes: {
-    type: [String],
-    enum: ['Call', 'Chat', 'Video'],
-    default: [] // e.g., ['Call', 'Chat']
-  },
+  /*
+    skills: {
+      type: [String],
+      default: [], // Max 5 skills from predefined list
+      validate: {
+        validator: function (arr) {
+          return arr.length <= 5;
+        },
+        message: 'Maximum 5 skills allowed'
+      }
+    },
+    languages: {
+      type: [String],
+      default: [] // e.g., ['English', 'Hindi', 'Telugu']
+    },
+    qualifications: {
+      type: [String],
+      default: []
+    },
+    consultationModes: {
+      type: [String],
+      enum: ['Call', 'Chat', 'Video'],
+      default: [] // e.g., ['Call', 'Chat']
+    },
+  */
 
   // Location Information
   location: {
@@ -193,39 +201,43 @@ const partnerSchema = new mongoose.Schema({
     }
   },
 
-  // Ratings and Reviews
-  rating: {
-    type: Number,
-    default: 0,
-    min: 0,
-    max: 5
-  },
-  totalRatings: {
-    type: Number,
-    default: 0
-  },
-  totalSessions: {
-    type: Number,
-    default: 0
-  },
-  completedSessions: {
-    type: Number,
-    default: 0
-  },
+  /*
+    // Ratings and Reviews
+    rating: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 5
+    },
+    totalRatings: {
+      type: Number,
+      default: 0
+    },
+    totalSessions: {
+      type: Number,
+      default: 0
+    },
+    completedSessions: {
+      type: Number,
+      default: 0
+    },
+  */
 
-  // Pricing
-  pricePerSession: {
-    type: Number,
-    default: 0
-  },
-  // Per-mode charges (compatible with Expert model)
-  chatCharge: { type: Number, default: 0, min: 0 },
-  voiceCharge: { type: Number, default: 0, min: 0 },
-  videoCharge: { type: Number, default: 0, min: 0 },
-  currency: {
-    type: String,
-    default: 'INR'
-  },
+  /*
+    // Pricing
+    pricePerSession: {
+      type: Number,
+      default: 0
+    },
+    // Per-mode charges (compatible with Expert model)
+    chatCharge: { type: Number, default: 0, min: 0 },
+    voiceCharge: { type: Number, default: 0, min: 0 },
+    videoCharge: { type: Number, default: 0, min: 0 },
+    currency: {
+      type: String,
+      default: 'INR'
+    },
+  */
 
   // Availability
   isActive: {
@@ -236,100 +248,118 @@ const partnerSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  availabilityPreference: {
-    type: [String],
-    enum: ['Weekdays', 'Weekends', 'Flexible'],
-    default: []
-  },
+  /*
+    availabilityPreference: {
+      type: [String],
+      enum: ['Weekdays', 'Weekends', 'Flexible'],
+      default: []
+    },
+  */
 
-  // Online Status Management
-  onlineStatus: {
-    type: String,
-    enum: ['online', 'offline', 'busy'],
-    default: 'offline'
-  },
-  lastActiveAt: {
-    type: Date,
-    default: null
-  },
-  lastOnlineAt: {
-    type: Date,
-    default: null
-  },
+  /*
+    // Online Status Management
+    onlineStatus: {
+      type: String,
+      enum: ['online', 'offline', 'busy'],
+      default: 'offline'
+    },
+    lastActiveAt: {
+      type: Date,
+      default: null
+    },
+    lastOnlineAt: {
+      type: Date,
+      default: null
+    },
+  
+    // Conversation Management
+    activeConversationsCount: {
+      type: Number,
+      default: 0
+    },
+    maxConversations: {
+      type: Number,
+      default: 10 // Maximum concurrent conversations
+    },
+    totalConversations: {
+      type: Number,
+      default: 0
+    },
+  */
 
-  // Conversation Management
-  activeConversationsCount: {
-    type: Number,
-    default: 0
-  },
-  maxConversations: {
-    type: Number,
-    default: 10 // Maximum concurrent conversations
-  },
-  totalConversations: {
-    type: Number,
-    default: 0
-  },
+  /*
+    // Work Schedule
+    workingHours: {
+      monday: { available: { type: Boolean, default: true }, start: String, end: String },
+      tuesday: { available: { type: Boolean, default: true }, start: String, end: String },
+      wednesday: { available: { type: Boolean, default: true }, start: String, end: String },
+      thursday: { available: { type: Boolean, default: true }, start: String, end: String },
+      friday: { available: { type: Boolean, default: true }, start: String, end: String },
+      saturday: { available: { type: Boolean, default: true }, start: String, end: String },
+      sunday: { available: { type: Boolean, default: false }, start: String, end: String }
+    },
+  */
 
-  // Work Schedule
-  workingHours: {
-    monday: { available: { type: Boolean, default: true }, start: String, end: String },
-    tuesday: { available: { type: Boolean, default: true }, start: String, end: String },
-    wednesday: { available: { type: Boolean, default: true }, start: String, end: String },
-    thursday: { available: { type: Boolean, default: true }, start: String, end: String },
-    friday: { available: { type: Boolean, default: true }, start: String, end: String },
-    saturday: { available: { type: Boolean, default: true }, start: String, end: String },
-    sunday: { available: { type: Boolean, default: false }, start: String, end: String }
-  },
+  /*
+    // Bank Details (for payments)
+    bankDetails: {
+      accountNumber: { type: String, default: null },
+      ifscCode: { type: String, default: null },
+      accountHolderName: { type: String, default: null },
+      bankName: { type: String, default: null },
+      upiId: { type: String, default: null }
+    },
+  */
 
-  // Bank Details (for payments)
-  bankDetails: {
-    accountNumber: { type: String, default: null },
-    ifscCode: { type: String, default: null },
-    accountHolderName: { type: String, default: null },
-    bankName: { type: String, default: null },
-    upiId: { type: String, default: null }
-  },
+  /*
+    // Verification Documents
+    documents: {
+      idProof: { type: String, default: null },
+      addressProof: { type: String, default: null },
+      certificates: { type: [String], default: [] }
+    },
+  */
 
-  // Verification Documents
-  documents: {
-    idProof: { type: String, default: null },
-    addressProof: { type: String, default: null },
-    certificates: { type: [String], default: [] }
-  },
+  /*
+    // Social Media Links
+    socialMedia: {
+      website: { type: String, default: null },
+      facebook: { type: String, default: null },
+      instagram: { type: String, default: null },
+      twitter: { type: String, default: null },
+      youtube: { type: String, default: null }
+    },
+  */
 
-  // Social Media Links
-  socialMedia: {
-    website: { type: String, default: null },
-    facebook: { type: String, default: null },
-    instagram: { type: String, default: null },
-    twitter: { type: String, default: null },
-    youtube: { type: String, default: null }
-  },
+  /*
+    // Statistics
+    stats: {
+      totalEarnings: { type: Number, default: 0 },
+      thisMonthEarnings: { type: Number, default: 0 },
+      lastMonthEarnings: { type: Number, default: 0 },
+      averageSessionDuration: { type: Number, default: 0 }, // in minutes
+      responseTime: { type: Number, default: 0 } // average response time in minutes
+    },
+  */
 
-  // Statistics
-  stats: {
-    totalEarnings: { type: Number, default: 0 },
-    thisMonthEarnings: { type: Number, default: 0 },
-    lastMonthEarnings: { type: Number, default: 0 },
-    averageSessionDuration: { type: Number, default: 0 }, // in minutes
-    responseTime: { type: Number, default: 0 } // average response time in minutes
-  },
+  /*
+    // Settings
+    settings: {
+      emailNotifications: { type: Boolean, default: true },
+      smsNotifications: { type: Boolean, default: true },
+      pushNotifications: { type: Boolean, default: true },
+      autoAcceptRequests: { type: Boolean, default: false },
+      privateProfile: { type: Boolean, default: false }
+    },
+  */
 
-  // Settings
-  settings: {
-    emailNotifications: { type: Boolean, default: true },
-    smsNotifications: { type: Boolean, default: true },
-    pushNotifications: { type: Boolean, default: true },
-    autoAcceptRequests: { type: Boolean, default: false },
-    privateProfile: { type: Boolean, default: false }
-  },
-
-  // Account Status
-  isBlocked: {
-    type: Boolean,
-    default: false
-  },
+  /*
+    // Account Status
+    isBlocked: {
+      type: Boolean,
+      default: false
+    },
+  */
   // Soft delete flag (compatible with Expert model)
   isDeleted: {
     type: Boolean,
@@ -361,27 +391,31 @@ const partnerSchema = new mongoose.Schema({
     default: null
   },
 
-  // Reset Password
-  resetPasswordToken: {
-    type: String,
-    default: null
-  },
-  resetPasswordExpires: {
-    type: Date,
-    default: null
-  },
+  /*
+    // Reset Password
+    resetPasswordToken: {
+      type: String,
+      default: null
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: null
+    },
+  */
 
-  // Credits (partner earnings from chat)
-  creditsEarnedTotal: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  creditsEarnedBalance: {
-    type: Number,
-    default: 0,
-    min: 0
-  }
+  /*
+    // Credits (partner earnings from chat)
+    creditsEarnedTotal: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
+    creditsEarnedBalance: {
+      type: Number,
+      default: 0,
+      min: 0
+    }
+  */
 }, {
   timestamps: true
 });
@@ -389,9 +423,11 @@ const partnerSchema = new mongoose.Schema({
 // Indexes for performance
 partnerSchema.index({ email: 1 });
 partnerSchema.index({ isActive: 1, isVerified: 1 });
+/*
 partnerSchema.index({ onlineStatus: 1 });
 partnerSchema.index({ rating: -1, totalSessions: -1 });
 partnerSchema.index({ expertiseCategory: 1 });
+*/
 partnerSchema.index({ 'location.coordinates.latitude': 1, 'location.coordinates.longitude': 1 }); // For geospatial queries
 
 // Hash password before saving
@@ -414,6 +450,7 @@ partnerSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
+/*
 // Method to check if partner can accept more conversations
 partnerSchema.methods.canAcceptConversation = function () {
   return this.activeConversationsCount < this.maxConversations;
@@ -448,6 +485,7 @@ partnerSchema.methods.decrementActiveConversations = async function () {
 partnerSchema.virtual('isAvailable').get(function () {
   return this.onlineStatus === 'online' && this.canAcceptConversation();
 });
+*/
 
 // Ensure virtuals are included in JSON
 partnerSchema.set('toJSON', { virtuals: true });

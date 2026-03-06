@@ -268,7 +268,7 @@ router.post('/login/:clientId', async (req, res) => {
     }
 
     // Find partner by email (and optionally by clientId)
-    const partner = await Partner.findOne(query).select('+password');
+    const partner = await Partner.findOne(query).select('+password').populate('clientId', 'clientId organizationName businessName fullName city state email');
 
     if (!partner) {
       return res.status(401).json({
@@ -318,7 +318,8 @@ router.post('/login/:clientId', async (req, res) => {
         },
         token,
         clientId: partner.clientId?.clientId || null,
-        clientName: partner.clientId?.businessName || null
+        clientName: partner.clientId?.organizationName || partner.clientId?.businessName || partner.clientId?.fullName || null,
+        organizationName: partner.clientId?.organizationName || partner.clientId?.businessName || partner.clientId?.fullName || null
       }
     });
   } catch (error) {
@@ -348,7 +349,7 @@ router.get('/profile', authenticate, async (req, res) => {
       });
     }
 
-    const partner = await Partner.findById(req.user._id).select('-password');
+    const partner = await Partner.findById(req.user._id).select('-password').populate('clientId', 'clientId organizationName businessName fullName city state email');
 
     if (!partner) {
       return res.status(404).json({
@@ -382,7 +383,10 @@ router.get('/profile', authenticate, async (req, res) => {
       message: 'Profile retrieved successfully',
       data: {
         partner: { ...partnerData, role: 'partner' },
-        token
+        token,
+        clientId: partner.clientId?.clientId || null,
+        clientName: partner.clientId?.organizationName || partner.clientId?.businessName || partner.clientId?.fullName || null,
+        organizationName: partner.clientId?.organizationName || partner.clientId?.businessName || partner.clientId?.fullName || null
       }
     });
   } catch (error) {

@@ -1,0 +1,2464 @@
+﻿{
+    "info": {
+        "_postman_id": "b3e05b38-e6b8-4e8c-aaff-f12b6f123456",
+        "name": "3rdAi",
+        "description": "API collection for Mobile User & Partner Registration, Login, Chat, and all related flows.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "description": "Publicly accessible APIs that do not require authentication.",
+            "name": "?? Public APIs",
+            "item": [
+                {
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "host": [
+                                "localhost"
+                            ],
+                            "protocol": "http",
+                            "raw": "{{base_url}}/api/public/clients",
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "public",
+                                "clients"
+                            ]
+                        },
+                        "description": "Get list of active organizations with City and Organization name combined in the label. Used for the Select Organization dropdown on login and register pages."
+                    },
+                    "name": "0. Get Active Organizations (Clients)",
+                    "response": []
+                }
+            ]
+        },
+        {
+            "name": "?? User - Registration",
+            "item": [
+                {
+                    "name": "1. Send Email OTP (Step 1)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/user/register/step1/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "user",
+                                "register",
+                                "step1",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Step 1: User provides email + password. OTP is sent to the email."
+                    }
+                },
+                {
+                    "name": "2. Verify Email OTP (Step 1 Verify)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"otp\": \"123456\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/user/register/step1/verify/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "user",
+                                "register",
+                                "step1",
+                                "verify",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Step 1 Verify: Verify the OTP sent to email."
+                    }
+                },
+                {
+                    "name": "3. Send Mobile OTP (Step 2)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"mobile\": \"919876543210\",\n  \"otpMethod\": \"gupshup\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/user/register/step2/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "user",
+                                "register",
+                                "step2",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Step 2: Send OTP to mobile number. otpMethod: gupshup | twilio | whatsapp"
+                    }
+                },
+                {
+                    "name": "4. Verify Mobile OTP (Step 2 Verify)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"mobile\": \"919876543210\",\n  \"otp\": \"123456\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/user/register/step2/verify/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "user",
+                                "register",
+                                "step2",
+                                "verify",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Step 2 Verify: Verify the OTP sent to mobile."
+                    }
+                },
+                {
+                    "name": "5. Complete Profile (Step 3)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"clientId\": \"{{client_id}}\",\n  \"name\": \"John Doe\",\n  \"policeStation\": \"Andheri East\",\n  \"address\": \"123 Main St, Mumbai\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/user/register/step3/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "user",
+                                "register",
+                                "step3",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Step 3: Complete profile. Returns JWT token on success."
+                    }
+                },
+                {
+                    "name": "6. Upload Profile Image (Step 4 - Optional)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_user}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/user/profile/image",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "user",
+                                "profile",
+                                "image"
+                            ]
+                        },
+                        "description": "Step 4 (Optional): Upload profile picture. Requires JWT token from Step 3."
+                    }
+                },
+                {
+                    "name": "Resend Email OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"testuser@example.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/user/register/resend-email-otp/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "user",
+                                "register",
+                                "resend-email-otp",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Resend OTP to email if it expired."
+                    }
+                },
+                {
+                    "name": "Resend Mobile OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"testuser@example.com\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/user/register/resend-mobile-otp/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "user",
+                                "register",
+                                "resend-mobile-otp",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Resend OTP to mobile if it expired."
+                    }
+                },
+                {
+                    "name": "Google Sign-In / Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"credential\": \"REPLACE_WITH_GOOGLE_ID_TOKEN\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/user/register/google/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "user",
+                                "register",
+                                "google",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Sign in or register via Google. If user is fully registered (step 3), returns JWT token. Otherwise continues registration flow."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "?? User - Sign In",
+            "item": [
+                {
+                    "name": "1. Login with Email & Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/user/login/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "auth",
+                                "user",
+                                "login",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Login with email and password. Returns token_user JWT. Also returns clientId, clientName, and organizationName for the app to use."
+                    }
+                },
+                {
+                    "name": "2. Get Current User Profile (/me)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_user}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/user/me",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "auth",
+                                "user",
+                                "me"
+                            ]
+                        },
+                        "description": "Get currently logged-in user's profile. Returns full user data along with clientId, clientName, and organizationName."
+                    }
+                },
+                {
+                    "name": "3. Forgot Password - Send OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/user/forgot-password",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "auth",
+                                "user",
+                                "forgot-password"
+                            ]
+                        },
+                        "description": "Initiate password reset. Sends OTP to registered email."
+                    }
+                },
+                {
+                    "name": "4. Verify Reset OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"otp\": \"123456\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/user/verify-reset-otp",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "auth",
+                                "user",
+                                "verify-reset-otp"
+                            ]
+                        },
+                        "description": "Verify the OTP received for password reset."
+                    }
+                },
+                {
+                    "name": "5. Reset Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"testuser@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPass@1234\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/auth/user/reset-password",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "auth",
+                                "user",
+                                "reset-password"
+                            ]
+                        },
+                        "description": "Reset password using the verified OTP."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "?? User - Report a Case",
+            "description": "APIs for citizen to submit cases with GPS auto-routing, track case status, and manage notifications.",
+            "item": [
+                {
+                    "name": "1. Submit Case (GPS Auto-Route)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_user}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"Snatching near Metro Pillar 12\",\n  \"priority\": \"high\",\n  \"latitude\": 28.5672,\n  \"longitude\": 77.2100,\n  \"formData\": {\n    \"type\": \"snatching\",\n    \"location\": \"Near Metro Pillar 12, Lajpat Nagar\",\n    \"dateTime\": \"2026-03-01T10:30:00\",\n    \"description\": \"Chain snatching incident near metro station by two men on bike\",\n    \"isAnonymous\": false,\n    \"snatchingType\": \"Chain\",\n    \"itemStolen\": \"Gold Chain\",\n    \"estimatedValue\": \"25000\",\n    \"numberOfAttackers\": \"2\",\n    \"weaponUsed\": \"No\",\n    \"vehicleUsed\": \"Bike\",\n    \"injuryHappened\": \"No\"\n  }\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/alerts/user",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "alerts",
+                                "user"
+                            ]
+                        },
+                        "description": "Citizen submits a case with GPS coordinates. Backend uses $geoIntersects to find the matching Area polygon ? auto-inherits clientId + assignedPartnerId + areaId. formData.type must be one of: snatching | theft | harassment | accident | robbery | camera_issue | unidentified_emergency. Token: token_user (from User Login)."
+                    }
+                },
+                {
+                    "name": "2. Get My All Cases (Track Status)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_user}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/alerts/user",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "alerts",
+                                "user"
+                            ]
+                        },
+                        "description": "Get all cases reported by the logged-in citizen. type=USER filter is auto-applied. Response includes status, timeline (full history), assignedPartnerId, and location. Token: token_user."
+                    }
+                },
+                {
+                    "name": "3. Get Single Case Detail (with Timeline)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_user}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/alerts/user/REPLACE_WITH_ALERT_ID",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "alerts",
+                                "user",
+                                "REPLACE_WITH_ALERT_ID"
+                            ]
+                        },
+                        "description": "Get full detail of a single reported case. Includes timeline (status history), metadata (original form data), and GPS location. Replace REPLACE_WITH_ALERT_ID with _id from API 2 response. Token: token_user."
+                    }
+                },
+                {
+                    "name": "4. Get My Notifications",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_user}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/notifications?page=1&limit=20",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "notifications"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "20"
+                                }
+                            ]
+                        },
+                        "description": "Get all notifications for the logged-in citizen. When a partner updates a case status, a notification is auto-created for the citizen. type=case_update notifications contain alertId in the data field. Token: token_user."
+                    }
+                },
+                {
+                    "name": "5. Mark Notification as Read",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_user}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/notifications/REPLACE_WITH_NOTIFICATION_ID/read",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "notifications",
+                                "REPLACE_WITH_NOTIFICATION_ID",
+                                "read"
+                            ]
+                        },
+                        "description": "Mark a single notification as read. Replace REPLACE_WITH_NOTIFICATION_ID with _id from API 4 response. Sets isRead=true and records readAt timestamp. Token: token_user."
+                    }
+                },
+                {
+                    "name": "6. Mark All Notifications as Read",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_user}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/notifications/read-all",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "notifications",
+                                "read-all"
+                            ]
+                        },
+                        "description": "Mark all notifications as read in one go. Useful for the 'Mark All Read' button in the notifications screen. Token: token_user."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "?? Partner - Registration",
+            "description": "Partner 4-step registration flow: Step1=Email OTP ? Step2=Phone OTP ? Step3=Profile (returns reg_token) ? Step4=Profile Picture Upload (R2). After Step4, account is pending approval from Client/Admin.",
+            "item": [
+                {
+                    "name": "1. Send Email OTP (Step 1)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"partner@example.com\",\n  \"password\": \"Partner@1234\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/partner/register/step1/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "partner",
+                                "register",
+                                "step1",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Step 1: Partner submits email + password. OTP is sent to email."
+                    }
+                },
+                {
+                    "name": "2. Verify Email OTP (Step 1 Verify)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"partner@example.com\",\n  \"otp\": \"123456\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/partner/register/step1/verify/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "partner",
+                                "register",
+                                "step1",
+                                "verify",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Step 1 Verify: Verify the email OTP."
+                    }
+                },
+                {
+                    "name": "3. Send Phone OTP (Step 2)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"partner@example.com\",\n  \"phone\": \"919876543210\",\n  \"otpMethod\": \"gupshup\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/partner/register/step2/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "partner",
+                                "register",
+                                "step2",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Step 2: Send OTP to phone number. otpMethod: gupshup | twilio | whatsapp"
+                    }
+                },
+                {
+                    "name": "4. Verify Phone OTP (Step 2 Verify)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"partner@example.com\",\n  \"otp\": \"123456\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/partner/register/step2/verify/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "partner",
+                                "register",
+                                "step2",
+                                "verify",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Step 2 Verify: Verify the OTP sent to phone. Body: email + otp + clientId (phone NOT required here)."
+                    }
+                },
+                {
+                    "name": "5. Complete Profile (Step 3)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"partner@example.com\",\n  \"clientId\": \"{{client_id}}\",\n  \"name\": \"Officer Sharma\",\n  \"designation\": \"Inspector\",\n  \"policeId\": \"POL-12345\",\n  \"area\": \"Connaught Place\",\n  \"state\": \"Delhi\",\n  \"experience\": 5\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/partner/register/step3/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "partner",
+                                "register",
+                                "step3",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Step 3: Complete partner profile (name, designation, policeId, area, state, experience). ? Returns JWT registration token (partner_reg_token) — save this, it is needed for Step 4. Partner isActive=false at this point, waiting for admin approval."
+                    }
+                },
+                {
+                    "name": "6. Upload Profile Picture (Step 4) ? R2",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{partner_reg_token}}",
+                                "description": "JWT token received from Step 3 response (data.token). Save it as Postman variable: partner_reg_token"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "src": [],
+                                    "description": "Profile photo (JPG/PNG/WEBP, max 5MB). Field name must be 'image'."
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/partner/register/step4",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "partner",
+                                "register",
+                                "step4"
+                            ]
+                        },
+                        "description": "Step 4: Upload profile picture to Cloudflare R2. Requires JWT token from Step 3 (save as {{partner_reg_token}}). FIXED: Partner isActive=false is now allowed in middleware during registration. R2 key stored as: images/partner/{id}/profile/{uuid}.jpg. DB: profilePicture=key, profilePictureKey=key. Response includes presigned URL for immediate display. After this, partner is pending Client/Admin approval."
+                    }
+                },
+                {
+                    "name": "Resend Email OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"partner@example.com\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/partner/register/resend-email-otp/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "partner",
+                                "register",
+                                "resend-email-otp",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Resend OTP to partner email if it expired during Step 1."
+                    }
+                },
+                {
+                    "name": "Resend Phone OTP",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"partner@example.com\",\n  \"otpMethod\": \"gupshup\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/partner/register/step2/resend/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "partner",
+                                "register",
+                                "step2",
+                                "resend",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Resend OTP to partner phone if expired during Step 2. otpMethod: gupshup | twilio | whatsapp"
+                    }
+                },
+                {
+                    "name": "Google Sign-In (Step 1 Alternative)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"credential\": \"REPLACE_WITH_GOOGLE_ID_TOKEN\",\n  \"clientId\": \"{{client_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/partner/register/step1/google/:clientId",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "partner",
+                                "register",
+                                "step1",
+                                "google",
+                                ":clientId"
+                            ],
+                            "variable": [
+                                {
+                                    "key": "clientId",
+                                    "value": "{{client_id}}"
+                                }
+                            ]
+                        },
+                        "description": "Alternative to Step 1 Email OTP — use Google OAuth to skip email OTP. Goes directly to Step 2 (Phone OTP). Returns registrationComplete=true if partner is already fully registered."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "?? Partner - Sign In",
+            "description": "Partner login and authentication APIs",
+            "item": [
+                {
+                    "name": "1. Login with Email & Password",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"partner@example.com\",\n  \"password\": \"Partner@1234\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/partners/login",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "partners",
+                                "login"
+                            ]
+                        },
+                        "description": "Partner login. Returns token_partner. Also returns success message and data object containing partner details, token, clientId, clientName, and organizationName. Will fail if verificationStatus is 'pending' or 'rejected'."
+                    }
+                },
+                {
+                    "name": "2. Check Approval Status (Polling) ? Returns Token",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/partners/approval-status?email=partner@example.com",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "partners",
+                                "approval-status"
+                            ],
+                            "query": [
+                                {
+                                    "key": "email",
+                                    "value": "partner@example.com"
+                                }
+                            ]
+                        },
+                        "description": "Poll this on the WaitingApproval screen (every 30 sec) to detect approval. No auth required. UPDATED RESPONSE: When verificationStatus='approved', response now includes: data.token (JWT token_partner), data.partner (full profile), clientId, clientName, and organizationName. Frontend should save token_partner + partner_data + organization info to localStorage and redirect directly to /partner/dashboard — NO re-login needed! Pending response: { verificationStatus: 'pending', name }. Rejected response: { verificationStatus: 'rejected', blockedReason }."
+                    }
+                },
+                {
+                    "name": "3. Google Login",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"credential\": \"REPLACE_WITH_GOOGLE_ID_TOKEN\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/partners/google-login",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "partners",
+                                "google-login"
+                            ]
+                        },
+                        "description": "Login partner via Google OAuth. Returns JWT token_partner, data.partner, clientId, clientName, and organizationName on success."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "?? Partner - Citizen Reports",
+            "description": "APIs for partner to view geo-routed citizen cases, update case status through strict 5-step flow, filter by status, and pick up unassigned cases. STATUS FLOW: Reported -> Under Review -> Verified -> Action Taken -> Resolved. Rejected is allowed only from Under Review or Verified.",
+            "item": [
+                {
+                    "name": "1. Get All Assigned Citizen Cases",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "port": "4000",
+                            "host": [
+                                "localhost"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "description": "USER = Citizen Reports | CLIENT = Device Alerts",
+                                    "value": "USER"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "50"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "status",
+                                    "description": "Optional: Reported | Under Review | Verified | Action Taken | Resolved | Rejected",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "priority",
+                                    "description": "Optional: low | medium | high | critical",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "includeUnassigned",
+                                    "description": "Optional: true = also show unassigned cases from same client",
+                                    "value": "false",
+                                    "disabled": true
+                                }
+                            ],
+                            "path": [
+                                "api",
+                                "alerts",
+                                "partner"
+                            ],
+                            "raw": "{{base_url}}/api/alerts/partner?type=USER&limit=50&page=1",
+                            "protocol": "http"
+                        },
+                        "description": "Get all citizen cases geo-routed and assigned to this partner (assignedPartnerId = logged-in partner). Response includes: alerts[], total, newCount (cases in last 24h), hasMore (pagination), statusCounts (breakdown by status). type=USER is required for citizen reports. Token: {{token_partner}} (from Partner Login API).",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_partner}}"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "2. Get Single Case Detail (Partner View)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "host": [
+                                "localhost"
+                            ],
+                            "protocol": "http",
+                            "raw": "{{base_url}}/api/alerts/partner/REPLACE_WITH_ALERT_ID",
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "alerts",
+                                "partner",
+                                "REPLACE_WITH_ALERT_ID"
+                            ]
+                        },
+                        "description": "Get full detail of a single citizen case. Response includes: (1) alert  full case data with timeline history and GPS location, (2) allowedNextStatuses  which status transitions are valid from current status, (3) availableBasisTypes  valid basisType options for this case's category. CALL THIS BEFORE calling Update Status APIs (4-8) to know what to send. Replace REPLACE_WITH_ALERT_ID with _id from API 1 response. Token: {{token_partner}}.",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_partner}}"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "3. Get Basis Types (by Case Category)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "port": "4000",
+                            "host": [
+                                "localhost"
+                            ],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "description": "Valid values: robbery | unidentified_emergency | snatching | theft | harassment | accident | camera_issue. Omit to get all categories.",
+                                    "value": "snatching"
+                                }
+                            ],
+                            "path": [
+                                "api",
+                                "alerts",
+                                "partner",
+                                "basis-types"
+                            ],
+                            "raw": "{{base_url}}/api/alerts/partner/basis-types?category=snatching",
+                            "protocol": "http"
+                        },
+                        "description": "Get valid basisType options for a specific case category. Each category has its own set of basis types  you MUST use a value from this list in the basisType field of Update Status APIs (4-8). If ?category param is omitted, returns all categories and all their basis types at once. Token: {{token_partner}}.",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_partner}}"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "4. Update Status  Under Review (Step 1)",
+                    "request": {
+                        "url": {
+                            "host": [
+                                "localhost"
+                            ],
+                            "protocol": "http",
+                            "raw": "{{base_url}}/api/alerts/partner/REPLACE_WITH_ALERT_ID/status",
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "alerts",
+                                "partner",
+                                "REPLACE_WITH_ALERT_ID",
+                                "status"
+                            ]
+                        },
+                        "method": "PATCH",
+                        "body": {
+                            "raw": "{\n  \"status\": \"Under Review\",\n  \"basisType\": \"Eyewitness Account Recorded\",\n  \"description\": \"Officers reached the location and recorded eyewitness statement from nearby shopkeeper near Metro Pillar 12. CCTV footage from nearby shop also requested.\"\n}",
+                            "mode": "raw"
+                        },
+                        "description": "STEP 1 of 4  Transition: Reported  Under Review. This is the FIRST action partner takes when they start investigating a case. Fields: status (required) = 'Under Review', basisType (required) = a valid string from API 3 for this case category, description (required) = min 20 characters detail note. On success: citizen gets auto push notification. If partner was not previously assigned, they get auto-assigned to this case. Token: {{token_partner}}.",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_partner}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "5. Update Status  Verified (Step 2)",
+                    "request": {
+                        "url": {
+                            "host": [
+                                "localhost"
+                            ],
+                            "protocol": "http",
+                            "raw": "{{base_url}}/api/alerts/partner/REPLACE_WITH_ALERT_ID/status",
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "alerts",
+                                "partner",
+                                "REPLACE_WITH_ALERT_ID",
+                                "status"
+                            ]
+                        },
+                        "method": "PATCH",
+                        "body": {
+                            "raw": "{\n  \"status\": \"Verified\",\n  \"basisType\": \"CCTV Footage Reviewed\",\n  \"description\": \"CCTV footage from 3 nearby cameras reviewed and the incident has been confirmed. Two suspects on a bike identified from footage at timestamp 10:32 AM. FIR being registered.\"\n}",
+                            "mode": "raw"
+                        },
+                        "description": "STEP 2 of 4  Transition: Under Review  Verified. Use this after investigation confirms the incident is genuine and evidence has been gathered. The case has been reviewed and facts are confirmed  now moving toward action. Prerequisite: case must be in 'Under Review' status. basisType must be from API 3 for this case's category. description min 20 characters. Token: {{token_partner}}.",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_partner}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "6. Update Status  Action Taken (Step 3)",
+                    "request": {
+                        "url": {
+                            "host": [
+                                "localhost"
+                            ],
+                            "protocol": "http",
+                            "raw": "{{base_url}}/api/alerts/partner/REPLACE_WITH_ALERT_ID/status",
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "alerts",
+                                "partner",
+                                "REPLACE_WITH_ALERT_ID",
+                                "status"
+                            ]
+                        },
+                        "method": "PATCH",
+                        "body": {
+                            "raw": "{\n  \"status\": \"Action Taken\",\n  \"basisType\": \"Suspect Apprehended\",\n  \"description\": \"Both suspects identified from CCTV footage have been apprehended from Saket area. Stolen gold chain recovered. FIR No. DL/2026/0312 registered at Lajpat Nagar Police Station.\"\n}",
+                            "mode": "raw"
+                        },
+                        "description": "STEP 3 of 4  Transition: Verified  Action Taken. Use this when concrete action has been taken on the verified case (suspect arrested, FIR filed, item recovered, etc.). Prerequisite: case must be in 'Verified' status. basisType must be from API 3 for this case's category. description min 20 characters. Token: {{token_partner}}.",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_partner}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "7. Update Status  Resolved (Step 4  Final )",
+                    "request": {
+                        "url": {
+                            "host": [
+                                "localhost"
+                            ],
+                            "protocol": "http",
+                            "raw": "{{base_url}}/api/alerts/partner/REPLACE_WITH_ALERT_ID/status",
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "alerts",
+                                "partner",
+                                "REPLACE_WITH_ALERT_ID",
+                                "status"
+                            ]
+                        },
+                        "method": "PATCH",
+                        "body": {
+                            "raw": "{\n  \"status\": \"Resolved\",\n  \"basisType\": \"Stolen Item Recovered\",\n  \"description\": \"Case fully resolved. Both suspects in judicial custody. Stolen gold chain returned to victim. Victim provided satisfaction receipt. Case closed with FIR No. DL/2026/0312.\"\n}",
+                            "mode": "raw"
+                        },
+                        "description": "STEP 4 of 4  Transition: Action Taken  Resolved. TERMINAL STATUS  Case is fully closed after resolution. isActive is set to false automatically. Citizen gets final notification. This status CANNOT be changed after setting. Prerequisite: case must be in 'Action Taken' status. basisType must be from API 3. description min 20 characters. Token: {{token_partner}}.",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_partner}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "8. Update Status  Rejected  (From Under Review or Verified)",
+                    "request": {
+                        "url": {
+                            "host": [
+                                "localhost"
+                            ],
+                            "protocol": "http",
+                            "raw": "{{base_url}}/api/alerts/partner/REPLACE_WITH_ALERT_ID/status",
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "alerts",
+                                "partner",
+                                "REPLACE_WITH_ALERT_ID",
+                                "status"
+                            ]
+                        },
+                        "method": "PATCH",
+                        "body": {
+                            "raw": "{\n  \"status\": \"Rejected\",\n  \"basisType\": \"Case Under Investigation\",\n  \"description\": \"After thorough CCTV review and witness statements, the reported incident could not be verified. No evidence of snatching found at the stated location and time. Case does not meet criteria for further action.\"\n}",
+                            "mode": "raw"
+                        },
+                        "description": "TERMINAL STATUS  Transition: Under Review  Rejected OR Verified  Rejected. Use this when the reported case is found to be false, duplicate, or unsubstantiated. isActive is set to false automatically. Citizen gets a rejection notification. This status CANNOT be changed after setting. Allowed ONLY from 'Under Review' or 'Verified'  NOT from 'Reported' or 'Action Taken'. basisType must be from API 3. description min 20 characters (explain why rejected). Token: {{token_partner}}.",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_partner}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "9. Get Unassigned Cases (Same Client Area)",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "port": "4000",
+                            "host": [
+                                "localhost"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "USER"
+                                },
+                                {
+                                    "key": "includeUnassigned",
+                                    "description": "true = show MY assigned cases + unassigned cases from same client. false = show only MY cases.",
+                                    "value": "true"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "50"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ],
+                            "path": [
+                                "api",
+                                "alerts",
+                                "partner"
+                            ],
+                            "raw": "{{base_url}}/api/alerts/partner?type=USER&includeUnassigned=true&limit=50&page=1",
+                            "protocol": "http"
+                        },
+                        "description": "Get citizen cases that have NOT been assigned to any partner yet (assignedPartnerId = null) from the same client's organization, along with own assigned cases. Useful when a partner wants to pick up an unassigned case from their area. Uses OR query: assignedPartnerId = self OR (clientId = same & assignedPartnerId = null). To self-assign an unassigned case, just call Update Status API (4)  partner gets auto-assigned on first status update. Token: {{token_partner}}.",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_partner}}"
+                            }
+                        ]
+                    }
+                },
+                {
+                    "name": "10. Filter Cases by Status",
+                    "request": {
+                        "method": "GET",
+                        "url": {
+                            "port": "4000",
+                            "host": [
+                                "localhost"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "USER"
+                                },
+                                {
+                                    "key": "status",
+                                    "description": "Filter by status. Valid values: Reported | Under Review | Verified | Action Taken | Resolved | Rejected",
+                                    "value": "Reported"
+                                },
+                                {
+                                    "key": "priority",
+                                    "description": "Optional filter: low | medium | high | critical",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "50"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                }
+                            ],
+                            "path": [
+                                "api",
+                                "alerts",
+                                "partner"
+                            ],
+                            "raw": "{{base_url}}/api/alerts/partner?type=USER&status=Reported&limit=50&page=1",
+                            "protocol": "http"
+                        },
+                        "description": "Filter assigned citizen cases by a specific status. Change the ?status= value to see cases at different stages. Useful for dashboard tabs like 'New Cases' (Reported), 'In Progress' (Under Review / Verified / Action Taken), 'Closed' (Resolved / Rejected). Combine with ?priority=high to see urgent pending cases. All valid statuses: Reported | Under Review | Verified | Action Taken | Resolved | Rejected. Token: {{token_partner}}.",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token_partner}}"
+                            }
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "?? Partner - Profile",
+            "description": "Partner profile management APIs",
+            "item": [
+                {
+                    "name": "1. Get My Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_token_partner"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/partners/profile",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "partners",
+                                "profile"
+                            ]
+                        },
+                        "description": "Get the logged-in partner's profile details. Returns partner data along with clientId, clientName, and organizationName."
+                    }
+                },
+                {
+                    "name": "2. Update Profile",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_token_partner"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "name",
+                                    "value": "Dr. Sharma Updated",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "phone",
+                                    "value": "919876543211",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "bio",
+                                    "value": "Updated bio text here.",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "designation",
+                                    "value": "Senior Astrologer",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "skills",
+                                    "value": "[\"Vedic Astrology\", \"Tarot\"]",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "languages",
+                                    "value": "[\"Hindi\", \"English\"]",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "area",
+                                    "value": "Lajpat Nagar",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "state",
+                                    "value": "Delhi",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "profileImage",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/partners/profile",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "partners",
+                                "profile"
+                            ]
+                        },
+                        "description": "Update partner profile. Optionally upload a new profile image via formdata."
+                    }
+                },
+                {
+                    "name": "3. Upload Profile Picture (Standalone)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_token_partner"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "image",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/partner/profile/picture",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "partner",
+                                "profile",
+                                "picture"
+                            ]
+                        },
+                        "description": "Update profile picture for an existing (approved) partner."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "?? Partner - Chat Management",
+            "description": "APIs for partner to manage online status, requests, and conversations",
+            "item": [
+                {
+                    "name": "1. Update Online Status",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_token_partner"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"online\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/chat/partner/status",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "chat",
+                                "partner",
+                                "status"
+                            ]
+                        },
+                        "description": "Update partner's online status. Values: online | offline | busy"
+                    }
+                },
+                {
+                    "name": "2. Get My Status",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_token_partner"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/chat/partner/status",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "chat",
+                                "partner",
+                                "status"
+                            ]
+                        },
+                        "description": "Get partner's current online status and conversation count."
+                    }
+                },
+                {
+                    "name": "3. Get Pending Conversation Requests",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_token_partner"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/chat/partner/requests",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "chat",
+                                "partner",
+                                "requests"
+                            ]
+                        },
+                        "description": "Get all pending conversation requests from users waiting to chat."
+                    }
+                },
+                {
+                    "name": "4. Accept Conversation Request",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_token_partner"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/chat/partner/requests/REPLACE_WITH_CONVERSATION_ID/accept",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "chat",
+                                "partner",
+                                "requests",
+                                "REPLACE_WITH_CONVERSATION_ID",
+                                "accept"
+                            ]
+                        },
+                        "description": "Accept a user's conversation request. Partner can accept if under max conversation limit."
+                    }
+                },
+                {
+                    "name": "5. Reject Conversation Request",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_token_partner"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/chat/partner/requests/REPLACE_WITH_CONVERSATION_ID/reject",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "chat",
+                                "partner",
+                                "requests",
+                                "REPLACE_WITH_CONVERSATION_ID",
+                                "reject"
+                            ]
+                        },
+                        "description": "Reject a user's conversation request."
+                    }
+                },
+                {
+                    "name": "6. Get All My Conversations",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_token_partner"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/chat/conversations",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "chat",
+                                "conversations"
+                            ]
+                        },
+                        "description": "Get all conversations (accepted/active/ended) for the partner."
+                    }
+                },
+                {
+                    "name": "7. Get Messages in Conversation",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_token_partner"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/chat/conversations/REPLACE_WITH_CONVERSATION_ID/messages?page=1&limit=50",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "chat",
+                                "conversations",
+                                "REPLACE_WITH_CONVERSATION_ID",
+                                "messages"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "50"
+                                }
+                            ]
+                        },
+                        "description": "Get messages for a specific conversation. Use page & limit for pagination."
+                    }
+                },
+                {
+                    "name": "8. Get Pending Partners (Admin/Client View)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_CLIENT_OR_ADMIN_TOKEN"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/partners/pending",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "partners",
+                                "pending"
+                            ]
+                        },
+                        "description": "Get all partners with pending verification status (for admin/client approval screen)."
+                    }
+                },
+                {
+                    "name": "9. Get All Partners (Admin/Client View)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_CLIENT_OR_ADMIN_TOKEN"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/partners/all",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "partners",
+                                "all"
+                            ]
+                        },
+                        "description": "Get all partners (all statuses) for admin/client."
+                    }
+                },
+                {
+                    "name": "10. Approve Partner (Admin/Client)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_CLIENT_OR_ADMIN_TOKEN"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/partners/REPLACE_WITH_PARTNER_ID/approve",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "partners",
+                                "REPLACE_WITH_PARTNER_ID",
+                                "approve"
+                            ]
+                        },
+                        "description": "Approve a partner to enable their login. Sets verificationStatus to 'approved'."
+                    }
+                },
+                {
+                    "name": "11. Reject Partner (Admin/Client)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_CLIENT_OR_ADMIN_TOKEN"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"reason\": \"Documents incomplete\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/partners/REPLACE_WITH_PARTNER_ID/reject",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "partners",
+                                "REPLACE_WITH_PARTNER_ID",
+                                "reject"
+                            ]
+                        },
+                        "description": "Reject a partner with an optional reason."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "?? AI Chat (User/Partner/Client)",
+            "description": "AI-powered chat APIs. All roles (user, partner, client) can use these.",
+            "item": [
+                {
+                    "name": "1. Create Chat",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_TOKEN_FROM_LOGIN"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"title\": \"My first chat\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/chat",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "chat"
+                            ]
+                        },
+                        "description": "Create a new AI chat session. Works for user, partner, and client roles."
+                    }
+                },
+                {
+                    "name": "2. Get All Chats",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_TOKEN_FROM_LOGIN"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/chat",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "chat"
+                            ]
+                        },
+                        "description": "Get all AI chat sessions for the logged-in user/partner/client."
+                    }
+                },
+                {
+                    "name": "3. Get Chat by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_TOKEN_FROM_LOGIN"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/chat/REPLACE_WITH_CHAT_ID",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "chat",
+                                "REPLACE_WITH_CHAT_ID"
+                            ]
+                        },
+                        "description": "Get a specific AI chat with all its messages."
+                    }
+                },
+                {
+                    "name": "4. Send Message (Get AI Reply)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_TOKEN_FROM_LOGIN"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"message\": \"Hello AI, how can you help me today?\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/chat/REPLACE_WITH_CHAT_ID/message",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "chat",
+                                "REPLACE_WITH_CHAT_ID",
+                                "message"
+                            ]
+                        },
+                        "description": "Send a message and get AI response (OpenAI or Gemini based on admin settings)."
+                    }
+                },
+                {
+                    "name": "5. Delete Chat",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_TOKEN_FROM_LOGIN"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/chat/REPLACE_WITH_CHAT_ID",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "chat",
+                                "REPLACE_WITH_CHAT_ID"
+                            ]
+                        },
+                        "description": "Delete an AI chat session."
+                    }
+                },
+                {
+                    "name": "6. Debug Auth (Check Token)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_TOKEN_FROM_LOGIN"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/mobile/chat/debug",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "mobile",
+                                "chat",
+                                "debug"
+                            ]
+                        },
+                        "description": "Debug endpoint to check token role, user ID and access. Useful for troubleshooting auth issues."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "?? User?Partner Real-time Chat",
+            "description": "APIs for user-side of Partner chat (find partners, create conversation requests, messages)",
+            "item": [
+                {
+                    "name": "1. Get Available Partners",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_USER_TOKEN"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/chat/partners",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "chat",
+                                "partners"
+                            ]
+                        },
+                        "description": "Get list of verified + active partners available for consultation."
+                    }
+                },
+                {
+                    "name": "2. Get Partner Details by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_USER_TOKEN"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/chat/partners/REPLACE_WITH_PARTNER_ID",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "chat",
+                                "partners",
+                                "REPLACE_WITH_PARTNER_ID"
+                            ]
+                        },
+                        "description": "Get full details of a specific partner (for profile display in chat sidebar)."
+                    }
+                },
+                {
+                    "name": "3. Create Conversation Request",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_USER_TOKEN"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"partnerId\": \"REPLACE_WITH_PARTNER_ID\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/chat/conversations",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "chat",
+                                "conversations"
+                            ]
+                        },
+                        "description": "User creates a consultation request with a partner. Status starts as 'pending' until partner accepts."
+                    }
+                },
+                {
+                    "name": "4. Get All My Conversations",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_USER_TOKEN"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/chat/conversations",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "chat",
+                                "conversations"
+                            ]
+                        },
+                        "description": "Get all conversations for the logged-in user (pending/accepted/active/ended)."
+                    }
+                },
+                {
+                    "name": "5. Get Messages in Conversation",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer REPLACE_WITH_USER_TOKEN"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/chat/conversations/REPLACE_WITH_CONVERSATION_ID/messages?page=1&limit=50",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "chat",
+                                "conversations",
+                                "REPLACE_WITH_CONVERSATION_ID",
+                                "messages"
+                            ],
+                            "query": [
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "50"
+                                }
+                            ]
+                        },
+                        "description": "Get messages for a conversation. Conversation must be in accepted/active state."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "?? Health & Misc",
+            "item": [
+                {
+                    "name": "Server Health Check",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{base_url}}/api/health",
+                            "protocol": "http",
+                            "host": [
+                                "localhost"
+                            ],
+                            "port": "4000",
+                            "path": [
+                                "api",
+                                "health"
+                            ]
+                        },
+                        "description": "Check if the server is running."
+                    }
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:4000",
+            "description": "Backend base URL. Change to production URL when needed."
+        },
+        {
+            "key": "client_id",
+            "value": "CLI-XXXXXX",
+            "description": "Replace with actual Client ID (e.g. CLI-ABC123)"
+        },
+        {
+            "key": "token_user",
+            "value": "",
+            "description": "JWT token for user role (set after login)"
+        },
+        {
+            "key": "token_partner",
+            "value": "",
+            "description": "JWT token for partner role (set after login)"
+        },
+        {
+            "key": "client_token",
+            "value": "",
+            "description": "JWT token for client role (set after login)"
+        }
+    ]
+}

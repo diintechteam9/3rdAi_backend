@@ -109,7 +109,7 @@ router.post('/google/:clientId', async (req, res) => {
 
     // Populate clientId if exists
     if (user.clientId) {
-      await user.populate('clientId', 'clientId businessName email');
+      await user.populate('clientId', 'clientId organizationName businessName fullName city state email');
     }
 
     // Generate token with clientId if available
@@ -125,7 +125,8 @@ router.post('/google/:clientId', async (req, res) => {
         },
         token,
         clientId: user.clientId?.clientId || null,
-        clientName: user.clientId?.businessName || null
+        clientName: user.clientId?.organizationName || user.clientId?.businessName || user.clientId?.fullName || null,
+        organizationName: user.clientId?.organizationName || user.clientId?.businessName || user.clientId?.fullName || null
       },
     });
   } catch (error) {
@@ -186,7 +187,7 @@ router.post('/login/:clientId', async (req, res) => {
 
     // Populate clientId if exists
     if (user.clientId) {
-      await user.populate('clientId', 'clientId businessName email');
+      await user.populate('clientId', 'clientId organizationName businessName fullName city state email');
     }
 
     // Generate token with clientId if available
@@ -216,7 +217,8 @@ router.post('/login/:clientId', async (req, res) => {
         user: { ...userData, role: 'user' },
         token,
         clientId: user.clientId?.clientId || null,
-        clientName: user.clientId?.businessName || null
+        clientName: user.clientId?.organizationName || user.clientId?.businessName || user.clientId?.fullName || null,
+        organizationName: user.clientId?.organizationName || user.clientId?.businessName || user.clientId?.fullName || null
       }
     });
   } catch (error) {
@@ -231,7 +233,7 @@ router.post('/login/:clientId', async (req, res) => {
 router.post('/register/:clientId', async (req, res) => {
   try {
     const { clientId: urlClientId } = req.params;
-    const { email, password, profile, clientId: clientCode } = req.body;
+    const { email, password, profile, address, clientId: clientCode } = req.body;
 
     if (!urlClientId || !clientCode || urlClientId !== clientCode) {
       return res.status(400).json({ success: false, message: 'Security Mismatch: Client ID in URL and Body do not match.' });
@@ -263,10 +265,15 @@ router.post('/register/:clientId', async (req, res) => {
       }
     }
 
+    const userProfile = profile || {};
+    if (address) {
+      userProfile.address = address;
+    }
+
     const user = new User({
       email,
       password,
-      profile: profile || {},
+      profile: userProfile,
       clientId: clientDoc._id,
     });
 
@@ -311,7 +318,10 @@ router.get('/me', authenticate, async (req, res) => {
     res.json({
       success: true,
       data: {
-        user: userData
+        user: userData,
+        clientId: userData.clientId?.clientId || null,
+        clientName: userData.clientId?.organizationName || userData.clientId?.businessName || userData.clientId?.fullName || null,
+        organizationName: userData.clientId?.organizationName || userData.clientId?.businessName || userData.clientId?.fullName || null
       }
     });
   } catch (error) {
