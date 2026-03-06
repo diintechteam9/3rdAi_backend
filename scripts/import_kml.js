@@ -7,12 +7,12 @@
  * USAGE:
  *   node scripts/import_kml.js
  *
- * Optional env vars to auto-assign IDs:
+ * City ↔ Client mapping is auto-resolved from DB using Client.cityBoundary field.
+ * If no client is found for a city, that city's KML is SKIPPED (multi-tenant safety).
+ *
+ * Optional env vars to override DB lookup:
  *   DELHI_CLIENT_ID=<ObjectId>
  *   BANGALORE_CLIENT_ID=<ObjectId>
- *
- * After import, use PATCH /api/areas/:id/assign-partner
- * or PATCH /api/areas/:id/assign-client to assign partners.
  */
 
 import fs from 'fs';
@@ -31,12 +31,13 @@ dotenv.config({ path: path.join(backendRoot, '.env') });
 
 import Area from '../models/Area.js';
 import Camera from '../models/Camera.js';
+import Client from '../models/Client.js';
 
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/brahmakosh';
 
-// Optional: pass client IDs from environment to auto-assign at import time
-const DELHI_CLIENT_ID = process.env.DELHI_CLIENT_ID || null;
-const BANGALORE_CLIENT_ID = process.env.BANGALORE_CLIENT_ID || null;
+// Optional env override — if not set, auto-resolved from DB
+let DELHI_CLIENT_ID = process.env.DELHI_CLIENT_ID || null;
+let BANGALORE_CLIENT_ID = process.env.BANGALORE_CLIENT_ID || null;
 
 // ─── KML coordinate helpers ───────────────────────────────────────────────────
 
@@ -83,26 +84,46 @@ function closeGeom(coords, geomType) {
 async function importKML() {
     try {
         console.log('\n' + '='.repeat(60));
-        console.log('🗺️  KML → MongoDB Geo Import');
+        console.log('\uD83D\uDDFA\uFE0F  KML \u2192 MongoDB Geo Import (Multi-Tenant)');
         console.log('='.repeat(60));
 
-        console.log('\n🔌 Connecting to MongoDB...');
+        console.log('\n\uD83D\uDD0C Connecting to MongoDB...');
         await mongoose.connect(MONGODB_URI);
-        console.log('✅ MongoDB connected');
+        console.log('\u2705 MongoDB connected');
+
+        // \u2500\u2500 Auto-resolve client IDs from DB if not set via env \u2500\u2500
+        if (!DELHI_CLIENT_ID) {
+            const delhiClient = await Client.findOne({ cityBoundary: 'Delhi' }).lean();
+            if (delhiClient) {
+                DELHI_CLIENT_ID = delhiClient._id.toString();
+                console.log(`\u2705 Delhi client auto-resolved: ${delhiClient.email} (${DELHI_CLIENT_ID})`);
+            } else {
+                console.warn('\u26A0\uFE0F  No Delhi client (cityBoundary=Delhi) found. Delhi KML will be SKIPPED.');
+            }
+        }
+        if (!BANGALORE_CLIENT_ID) {
+            const bangaloreClient = await Client.findOne({ cityBoundary: 'Bangalore' }).lean();
+            if (bangaloreClient) {
+                BANGALORE_CLIENT_ID = bangaloreClient._id.toString();
+                console.log(`\u2705 Bangalore client auto-resolved: ${bangaloreClient.email} (${BANGALORE_CLIENT_ID})`);
+            } else {
+                console.warn('\u26A0\uFE0F  No Bangalore client (cityBoundary=Bangalore) found. Bangalore KML will be SKIPPED.');
+            }
+        }
 
         // Clear existing collections to avoid duplicates on re-import
-        console.log('\n🗑️  Clearing Area and Camera collections...');
+        console.log('\n\uD83D\uDDD1\uFE0F  Clearing Area and Camera collections...');
         const delAreas = await Area.deleteMany({});
         const delCameras = await Camera.deleteMany({});
         console.log(`   Deleted ${delAreas.deletedCount} areas, ${delCameras.deletedCount} cameras`);
 
-        // File definitions — order matters; process areas before cameras
+        // File definitions — clientId REQUIRED for area files (multi-tenant isolation)
         const files = [
             {
                 path: path.join(backendRoot, '..', '..', 'Delhi_Pincode.kml'),
                 city: 'Delhi',
                 type: 'area',
-                clientId: DELHI_CLIENT_ID
+                clientId: DELHI_CLIENT_ID   // null = no Delhi client → will be skipped
             },
             {
                 path: path.join(backendRoot, '..', '..', 'benglore_pincode.kml'),
@@ -121,6 +142,12 @@ async function importKML() {
         let totalCameras = 0;
 
         for (const fileDef of files) {
+            // MULTI-TENANT SAFETY: Skip area files that have no clientId
+            if (fileDef.type === 'area' && !fileDef.clientId) {
+                console.warn(`\n\u23ED\uFE0F  Skipping ${fileDef.city} KML — no client registered for this city.`);
+                continue;
+            }
+
             if (!fs.existsSync(fileDef.path)) {
                 console.warn(`\n⚠️  File not found, skipping: ${fileDef.path}`);
                 continue;

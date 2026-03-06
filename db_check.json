@@ -1,0 +1,57 @@
+{
+  "clients": [
+    {
+      "_id": "69a2c5e212fbb7a341a3a0fc",
+      "email": "delhipolice01@gmail.com",
+      "cityBoundary": "Delhi",
+      "clientId": "CLI-PXASW5"
+    },
+    {
+      "_id": "69a91f9b06d02ecaf5640b5c",
+      "email": "bangalorepolice01@gmail.com",
+      "cityBoundary": "Bangalore",
+      "clientId": "CLI-17JD61"
+    }
+  ],
+  "areaStats": {
+    "Delhi": 12,
+    "Bangalore": 113
+  },
+  "sampleBangaloreAreas": [
+    {
+      "_id": "69a953b56e8540efc3539190",
+      "name": "Adugodi PS",
+      "city": "Bangalore",
+      "clientId": "69a91f9b06d02ecaf5640b5c",
+      "partnerId": null
+    },
+    {
+      "_id": "69a953b66e8540efc3539192",
+      "name": "Amruthahally PS",
+      "city": "Bangalore",
+      "clientId": "69a91f9b06d02ecaf5640b5c",
+      "partnerId": null
+    },
+    {
+      "_id": "69a953b66e8540efc3539194",
+      "name": "Annapoorneshwari Nagar PS",
+      "city": "Bangalore",
+      "clientId": "69a91f9b06d02ecaf5640b5c",
+      "partnerId": null
+    },
+    {
+      "_id": "69a953b66e8540efc3539196",
+      "name": "Ashokanagara  PS",
+      "city": "Bangalore",
+      "clientId": "69a91f9b06d02ecaf5640b5c",
+      "partnerId": null
+    },
+    {
+      "_id": "69a953b66e8540efc3539198",
+      "name": "AVALAHALLI PS",
+      "city": "Bangalore",
+      "clientId": "69a91f9b06d02ecaf5640b5c",
+      "partnerId": null
+    }
+  ]
+}

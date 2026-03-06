@@ -39,7 +39,13 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Clients don't need approval, loginApproved check removed
+    // Check if admin has approved this client
+    if (!client.loginApproved) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is pending admin approval. Please wait for approval before logging in.'
+      });
+    }
 
     const token = generateToken(client._id, 'client');
 
@@ -99,14 +105,14 @@ router.post('/register', async (req, res) => {
       contactNumber,
       alternateContact,
       cityBoundary,
-      loginApproved: true // Clients don't need approval
+      loginApproved: false // Self-registered clients need admin approval
     });
 
     await client.save();
 
     res.status(201).json({
       success: true,
-      message: 'Police HQ Client registered successfully. You can login now.',
+      message: 'Registration submitted successfully! Your account is pending admin approval. You will be able to login once approved.',
       data: {
         client: client.toObject()
       }

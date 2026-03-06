@@ -415,10 +415,17 @@ router.post('/step3', async (req, res) => {
         // Save profile — registration not yet complete; partner still needs approval
         partner.name = name;
         partner.designation = designation;
-        partner.location = { area, state };
         partner.policeId = policeId;
+        partner.policeStation = area; // Map 'area' input to 'policeStation' field as well
+
+        // Ensure location object exists and set fields individually to avoid overwriting other sub-fields
+        if (!partner.location) partner.location = {};
+        partner.location.area = area;
+        partner.location.state = state;
+
         partner.experience = Number(experience) || 0;
         partner.registrationStep = Math.max(partner.registrationStep || 0, 3);
+
         // Partner stays isActive=false / verificationStatus=pending until client approves
         await partner.save();
 
@@ -434,6 +441,15 @@ router.post('/step3', async (req, res) => {
                 registrationStep: 3,
                 clientId: clientDoc.clientId,
                 clientName: clientDoc.businessName,
+                // Include updated fields in response for verification
+                profile: {
+                    name: partner.name,
+                    designation: partner.designation,
+                    policeId: partner.policeId,
+                    policeStation: partner.policeStation,
+                    area: partner.location.area,
+                    state: partner.location.state
+                }
             },
         });
     } catch (err) {

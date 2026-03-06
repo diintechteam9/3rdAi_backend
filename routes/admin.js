@@ -34,22 +34,19 @@ router.get('/clients', async (req, res) => {
   }
 });
 
-// Create client
+// Create client (Admin creates on behalf — same fields as Police HQ self-register)
 router.post('/clients', async (req, res) => {
   try {
     const {
       email,
       password,
-      businessName,
-      websiteUrl,
-      gstNumber,
-      panNumber,
-      businessLogo,
-      fullName,
-      mobileNumber,
-      address,
+      organizationName,
+      state,
       city,
-      pincode
+      address,
+      contactNumber,
+      alternateContact,
+      cityBoundary
     } = req.body;
 
     // Validate required fields
@@ -57,6 +54,20 @@ router.post('/clients', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Email and password are required'
+      });
+    }
+
+    if (!organizationName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Organization name is required'
+      });
+    }
+
+    if (!cityBoundary || !['Delhi', 'Bangalore'].includes(cityBoundary)) {
+      return res.status(400).json({
+        success: false,
+        message: 'City boundary must be Delhi or Bangalore'
       });
     }
 
@@ -73,16 +84,13 @@ router.post('/clients', async (req, res) => {
     const client = new Client({
       email,
       password,
-      businessName: businessName || '',
-      websiteUrl: websiteUrl || '',
-      gstNumber: gstNumber || '',
-      panNumber: panNumber || '',
-      businessLogo: businessLogo || '',
-      fullName: fullName || '',
-      mobileNumber: mobileNumber || '',
-      address: address || '',
+      organizationName: organizationName || '',
+      state: state || '',
       city: city || '',
-      pincode: pincode || '',
+      address: address || '',
+      contactNumber: contactNumber || '',
+      alternateContact: alternateContact || '',
+      cityBoundary: cityBoundary || 'Delhi',
       createdBy: req.user._id,
       adminId: req.user._id,
       loginApproved: true, // Clients created by admin are auto-approved
@@ -92,14 +100,14 @@ router.post('/clients', async (req, res) => {
     // Save client (this will trigger the pre-validate hook to generate clientId)
     await client.save();
 
-    console.log('Client created successfully with ID:', client.clientId);
+    console.log('Police Client created successfully with ID:', client.clientId);
 
     res.status(201).json({
       success: true,
-      message: 'Client created successfully',
+      message: 'Police client created successfully',
       data: {
         client,
-        clientId: client.clientId // Explicitly include the generated ID
+        clientId: client.clientId
       }
     });
   } catch (error) {
@@ -293,8 +301,8 @@ router.get('/users', async (req, res) => {
 router.get('/dashboard/overview', async (req, res) => {
   try {
     const query = req.user.role === 'super_admin'
-      ? { adminId: { $exists: true } }
-      : { adminId: req.user._id };
+      ? {}
+      : { $or: [{ adminId: req.user._id }, { adminId: null }, { adminId: { $exists: false } }] };
 
     const totalClients = await Client.countDocuments(query);
     const activeClients = await Client.countDocuments({ ...query, isActive: true });
@@ -340,8 +348,13 @@ router.post('/clients/:id/login-token', async (req, res) => {
       });
     }
 
-    // Check if admin has permission (client belongs to this admin)
-    if (req.user.role !== 'super_admin' && client.adminId.toString() !== req.user._id.toString()) {
+    // Check if admin has permission
+    // Allow if: super_admin OR client has no adminId (unassigned/self-registered) OR adminId matches this admin
+    if (
+      req.user.role !== 'super_admin' &&
+      client.adminId &&
+      client.adminId.toString() !== req.user._id.toString()
+    ) {
       return res.status(403).json({
         success: false,
         message: 'Access denied'
@@ -359,6 +372,63 @@ router.post('/clients/:id/login-token', async (req, res) => {
         clientCode: client.clientId,
         businessName: client.businessName
       }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Approve client (set loginApproved = true)
+router.patch('/clients/:id/approve', async (req, res) => {
+  try {
+    const client = await Client.findById(req.params.id);
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found'
+      });
+    }
+
+    client.loginApproved = true;
+    client.adminId = client.adminId || req.user._id; // assign adminId if not already set
+    await client.save();
+
+    res.json({
+      success: true,
+      message: 'Client approved successfully',
+      data: { client }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// Reject / revoke client approval (set loginApproved = false)
+router.patch('/clients/:id/reject', async (req, res) => {
+  try {
+    const client = await Client.findById(req.params.id);
+
+    if (!client) {
+      return res.status(404).json({
+        success: false,
+        message: 'Client not found'
+      });
+    }
+
+    client.loginApproved = false;
+    await client.save();
+
+    res.json({
+      success: true,
+      message: 'Client approval revoked',
+      data: { client }
     });
   } catch (error) {
     res.status(500).json({

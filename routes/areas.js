@@ -7,6 +7,12 @@
  * PATCH /api/areas/:id/assign-partner  — Client assigns partner to area
  * PATCH /api/areas/:id/unassign-partner — Remove partner from area
  * PATCH /api/areas/:id/assign-client   — Admin assigns client to area
+ *
+ * SECURITY RULES (multi-tenant city isolation):
+ *   Client  → ALWAYS filtered by their own _id (clientId from JWT). Cannot see other cities.
+ *   Partner → Filtered by their partnerId (only their assigned zone).
+ *   Admin   → No filter; can see all.
+ *   Public  → Must pass explicit ?clientId= or ?partnerId= query — no full dump allowed.
  */
 
 import express from 'express';
@@ -17,17 +23,55 @@ import { authenticate } from '../middleware/authMiddleware.js';
 const router = express.Router();
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  GET /api/areas — GeoJSON FeatureCollection for Leaflet map consumption
-//  Query: ?city=  ?clientId=  ?partnerId=
+//  GET /api/areas — GeoJSON FeatureCollection for Leaflet map
+//  Auth: optional but enforced when present
+//    - client  token → always returns ONLY their city areas (clientId = token._id)
+//    - partner token → always returns ONLY their assigned area (partnerId = token._id)
+//    - admin   token → no filter (all areas)
+//    - no token      → must provide ?clientId= or ?partnerId= in query
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/', async (req, res) => {
     try {
-        const { city, clientId, partnerId } = req.query;
+        // Try to decode token if present (optional auth)
+        let role = null;
+        let tokenUserId = null;
+        const authHeader = req.headers.authorization;
+        if (authHeader?.startsWith('Bearer ')) {
+            try {
+                const jwt = await import('jsonwebtoken');
+                const decoded = jwt.default.verify(
+                    authHeader.split(' ')[1],
+                    process.env.JWT_SECRET
+                );
+                role = decoded.role;
+                tokenUserId = decoded.userId || decoded.partnerId || decoded.id;
+            } catch (_) {
+                // Invalid token → treat as public request
+            }
+        }
 
+        const { city, clientId, partnerId } = req.query;
         const filter = {};
-        if (city) filter.city = city;
-        if (clientId) filter.clientId = clientId;
-        if (partnerId) filter.partnerId = partnerId;
+
+        if (role === 'client' && tokenUserId) {
+            // Client → ONLY their areas. Ignore any query params to prevent spoofing.
+            filter.clientId = new mongoose.Types.ObjectId(tokenUserId);
+        } else if (role === 'partner' && tokenUserId) {
+            // Partner → ONLY their assigned area
+            filter.partnerId = new mongoose.Types.ObjectId(tokenUserId);
+        } else if (role === 'admin' || role === 'super_admin') {
+            // Admin → optional city filter, otherwise all
+            if (city) filter.city = city;
+        } else {
+            // Public / no token → require explicit filter for safety
+            if (clientId) filter.clientId = clientId;
+            else if (partnerId) filter.partnerId = partnerId;
+            else if (city) filter.city = city;
+            else {
+                // No filter at all → return empty (prevent full DB dump)
+                return res.json({ type: 'FeatureCollection', features: [] });
+            }
+        }
 
         const areas = await Area.find(filter)
             .populate('partnerId', 'name email designation')
@@ -57,21 +101,44 @@ router.get('/', async (req, res) => {
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GET /api/areas/list — Plain JSON array (for client-side tables & dropdowns)
-//  Query: ?city=  ?clientId=  ?partnerId=
-//  Response: { success, areas: [...], total }
+//  Same isolation rules as GET /api/areas above.
 // ─────────────────────────────────────────────────────────────────────────────
 router.get('/list', async (req, res) => {
     try {
-        const { city, clientId, partnerId } = req.query;
+        let role = null;
+        let tokenUserId = null;
+        const authHeader = req.headers.authorization;
+        if (authHeader?.startsWith('Bearer ')) {
+            try {
+                const jwt = await import('jsonwebtoken');
+                const decoded = jwt.default.verify(
+                    authHeader.split(' ')[1],
+                    process.env.JWT_SECRET
+                );
+                role = decoded.role;
+                tokenUserId = decoded.userId || decoded.partnerId || decoded.id;
+            } catch (_) { }
+        }
 
+        const { city, clientId, partnerId } = req.query;
         const filter = {};
-        if (city) filter.city = city;
-        if (clientId) filter.clientId = clientId;
-        if (partnerId) filter.partnerId = partnerId;
+
+        if (role === 'client' && tokenUserId) {
+            filter.clientId = new mongoose.Types.ObjectId(tokenUserId);
+        } else if (role === 'partner' && tokenUserId) {
+            filter.partnerId = new mongoose.Types.ObjectId(tokenUserId);
+        } else if (role === 'admin' || role === 'super_admin') {
+            if (city) filter.city = city;
+        } else {
+            if (clientId) filter.clientId = clientId;
+            else if (partnerId) filter.partnerId = partnerId;
+            else if (city) filter.city = city;
+            else return res.json({ success: true, total: 0, areas: [] });
+        }
 
         const areas = await Area.find(filter)
             .populate('partnerId', 'name email designation')
-            .select('-boundary')   // exclude heavy polygon coords from list view
+            .select('-boundary')
             .sort({ name: 1 })
             .lean();
 
@@ -94,6 +161,7 @@ router.get('/list', async (req, res) => {
         res.status(500).json({ error: 'Server error fetching area list' });
     }
 });
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  GET /api/areas/my-areas — Auth-aware area fetching

@@ -7,14 +7,14 @@ const router = express.Router();
 router.get('/clients', async (req, res) => {
   try {
     const clients = await Client.find({ isActive: true })
-      .select('clientId businessName fullName')
-      .sort({ businessName: 1 });
+      .select('clientId organizationName city')
+      .sort({ organizationName: 1 });
 
     res.json({
       success: true,
       data: clients.map(c => ({
         clientId: c.clientId,
-        label: c.businessName || c.fullName || c.clientId
+        label: c.organizationName && c.city ? `${c.city} - ${c.organizationName}` : (c.city || c.organizationName || c.clientId)
       }))
     });
   } catch (error) {
