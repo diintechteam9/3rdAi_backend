@@ -293,12 +293,21 @@ router.post('/user', authenticate, async (req, res) => {
         const lng = parseFloat(longitude);
         const lat = parseFloat(latitude);
 
+        // ✅ Sirf apne client ke areas mein dhundo (city isolation)
+        const userClientId = req.user.clientId?._id || req.user.clientId;
+
         if (!isNaN(lng) && !isNaN(lat)) {
             // Build GeoJSON Point — always [longitude, latitude] per GeoJSON spec
             locationPoint = { type: 'Point', coordinates: [lng, lat] };
 
+            console.log(`[GeoRouting] GPS: [${lng}, ${lat}] | clientId filter: ${userClientId}`);
+
+            // ✅ FIX: clientId filter add kiya — sirf apne client/city ke areas search hote hain
+            const clientFilter = userClientId ? { clientId: userClientId } : {};
+
             // Find the pincode/area polygon that contains this GPS point
             matchedArea = await Area.findOne({
+                ...clientFilter,
                 boundary: {
                     $geoIntersects: {
                         $geometry: locationPoint
@@ -311,16 +320,17 @@ router.post('/user', authenticate, async (req, res) => {
                 resolvedClientId = matchedArea.clientId || resolvedClientId;
                 assignedPartnerId = matchedArea.partnerId || null;
                 routedAreaId = matchedArea._id;
-                console.log(`[GeoRouting] Exact Match → Area: "${matchedArea.name}" | Partner: ${assignedPartnerId || 'unassigned'}`);
+                console.log(`[GeoRouting] ✅ Exact Match → Area: "${matchedArea.name}" (${matchedArea.city}) | Partner: ${assignedPartnerId || 'UNASSIGNED — please assign partner to this area'}`);
             } else {
-                // ── FALLBACK: NEAREST AREA ──────────────────────────────────
-                // If point is not inside any polygon, find the nearest area within 100km
-                console.log('[GeoRouting] No exact area match. Hunting for nearest area...');
+                // ── FALLBACK: NEAREST AREA (same client only) ───────────────
+                // If point is not inside any polygon, find nearest area within 50km (same city)
+                console.log('[GeoRouting] No exact area match. Hunting for nearest area in same city...');
                 const nearestArea = await Area.findOne({
+                    ...clientFilter,   // ✅ FIX: sirf apne client ke areas mein nearest dhundo
                     boundary: {
                         $near: {
                             $geometry: locationPoint,
-                            $maxDistance: 100000 // 100km limit
+                            $maxDistance: 50000   // ✅ FIX: 100km se 50km kiya — city ke bahar nahi jaana
                         }
                     }
                 }).lean();
@@ -329,9 +339,9 @@ router.post('/user', authenticate, async (req, res) => {
                     resolvedClientId = nearestArea.clientId || resolvedClientId;
                     assignedPartnerId = nearestArea.partnerId || null;
                     routedAreaId = nearestArea._id;
-                    console.log(`[GeoRouting] Nearest Match → Area: "${nearestArea.name}" | Partner: ${assignedPartnerId || 'unassigned'}`);
+                    console.log(`[GeoRouting] ⚠️  Nearest Match → Area: "${nearestArea.name}" (${nearestArea.city}) | Partner: ${assignedPartnerId || 'UNASSIGNED'}`);
                 } else {
-                    console.warn('[GeoRouting] No area matched GPS point even within 100km');
+                    console.warn('[GeoRouting] ❌ No area matched GPS point — case will use user default clientId');
                 }
             }
         }
