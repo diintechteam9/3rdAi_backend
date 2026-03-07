@@ -7,7 +7,7 @@
 
 import express from 'express';
 import Announcement from '../models/Announcement.js';
-import { authenticate } from '../middleware/authMiddleware.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 

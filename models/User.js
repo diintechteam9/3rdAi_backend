@@ -5,7 +5,6 @@ const userSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true,
     trim: true,
     lowercase: true
   },
@@ -126,6 +125,9 @@ const userSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
+// Add compound unique index for multi-client email support
+userSchema.index({ email: 1, clientId: 1 }, { unique: true });
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {

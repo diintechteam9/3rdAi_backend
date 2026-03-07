@@ -226,6 +226,7 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
     sessionId,
     expiresAt = getOTPExpiry(),
     client = '3rdAI',
+    clientId = null,
   } = options;
 
   try {
@@ -246,6 +247,7 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
             expiresAt,
             type: 'email',
             client,
+            clientId: clientId || undefined,
             sessionId: sessionId || undefined,
           });
         } catch (dbError) {
@@ -276,6 +278,7 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
             expiresAt,
             type: 'email',
             client,
+            clientId: clientId || undefined,
             sessionId: sessionId || undefined,
           });
         } catch (dbError) {
@@ -404,6 +407,7 @@ export const sendEmailOTP = async (email, otp, options = {}) => {
         expiresAt,
         type: 'email',
         client,
+        clientId: clientId || undefined,
         sessionId: sessionId || undefined,
       });
     } catch (dbError) {
@@ -631,7 +635,8 @@ const sendSMSViaTwilio = async (mobile, otp) => {
  * @param {string} method - 'twilio', 'gupshup', or 'whatsapp'
  * @returns {Promise<Object>} - Result object with success status
  */
-export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
+export const sendMobileOTP = async (mobile, otp, method = 'twilio', options = {}) => {
+  const { clientId = null } = options;
   try {
     const otpMethod = method.toLowerCase();
 
@@ -665,7 +670,7 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
 
           try {
             await OTP.updateMany(
-              { mobile: normalizedMobile, type: { $in: ['whatsapp', 'sms', 'mobile'] }, isUsed: false },
+              { mobile: normalizedMobile, type: { $in: ['whatsapp', 'sms', 'mobile'] }, isUsed: false, clientId: clientId || undefined },
               { $set: { isUsed: true } }
             );
 
@@ -674,7 +679,8 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
               otp,
               expiresAt,
               type: 'whatsapp',
-              client: '3rdAI'
+              client: '3rdAI',
+              clientId: clientId || undefined
             });
           } catch (dbError) {
             console.warn('Could not save OTP to database collection (OTP is saved in User model):', dbError.message);
@@ -703,7 +709,7 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
 
           try {
             await OTP.updateMany(
-              { mobile: normalizedMobile, type: { $in: ['whatsapp', 'sms', 'mobile'] }, isUsed: false },
+              { mobile: normalizedMobile, type: { $in: ['whatsapp', 'sms', 'mobile'] }, isUsed: false, clientId: clientId || undefined },
               { $set: { isUsed: true } }
             );
 
@@ -712,7 +718,8 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
               otp,
               expiresAt,
               type: 'whatsapp',
-              client: '3rdAI'
+              client: '3rdAI',
+              clientId: clientId || undefined
             });
           } catch (dbError) {
             console.warn('Could not save OTP to database collection (OTP is saved in User model):', dbError.message);
@@ -766,7 +773,7 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
 
       try {
         await OTP.updateMany(
-          { mobile: normalizedMobile, type: { $in: ['whatsapp', 'sms', 'mobile'] }, isUsed: false },
+          { mobile: normalizedMobile, type: { $in: ['whatsapp', 'sms', 'mobile'] }, isUsed: false, clientId: clientId || undefined },
           { $set: { isUsed: true } }
         );
 
@@ -775,7 +782,8 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
           otp,
           expiresAt,
           type: 'sms',
-          client: '3rdAI'
+          client: '3rdAI',
+          clientId: clientId || undefined
         });
       } catch (dbError) {
         console.warn('Could not save OTP to database collection (OTP is saved in User model):', dbError.message);
@@ -809,7 +817,7 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
 
       try {
         await OTP.updateMany(
-          { mobile: normalizedMobile, type: { $in: ['whatsapp', 'sms', 'mobile'] }, isUsed: false },
+          { mobile: normalizedMobile, type: { $in: ['whatsapp', 'sms', 'mobile'] }, isUsed: false, clientId: clientId || undefined },
           { $set: { isUsed: true } }
         );
 
@@ -818,7 +826,8 @@ export const sendMobileOTP = async (mobile, otp, method = 'twilio') => {
           otp,
           expiresAt,
           type: 'sms',
-          client: 'brahmakosh'
+          client: 'brahmakosh',
+          clientId: clientId || undefined
         });
       } catch (dbError) {
         console.warn('Could not save OTP to database collection (OTP is saved in User model):', dbError.message);

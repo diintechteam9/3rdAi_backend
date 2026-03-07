@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 import Alert from '../models/Alert.js';
 import Area from '../models/Area.js';
 import Notification from '../models/Notification.js';
-import { authenticate } from '../middleware/authMiddleware.js';
+import { authenticate } from '../middleware/auth.js';
 import { putobject } from '../utils/s3.js'; // Fix import path
 
 const router = express.Router();

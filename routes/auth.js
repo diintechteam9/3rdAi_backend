@@ -28,8 +28,8 @@ router.post('/register/user', async (req, res) => {
       });
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    // Check if user already exists for this specific client
+    const existingUser = await User.findOne({ email, clientId: clientDoc._id });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -151,7 +151,7 @@ router.post('/register/google', async (req, res) => {
     // Note: The User model schema might need adjustment if it doesn't support 'clientId' or 'authProvider' 
     // exactly as used here, but checking the schema previously showed it has clientId and authMethod.
 
-    let user = await User.findOne({ email }).populate('clientId', 'clientId businessName email');
+    let user = await User.findOne({ email, clientId: clientDoc._id }).populate('clientId', 'clientId businessName email');
 
     if (user) {
       // User exists - login
@@ -222,7 +222,7 @@ router.post('/register/google', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, clientId } = req.body; // Extract clientId from body
 
     if (!email || !password) {
       return res.status(400).json({
@@ -231,7 +231,17 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email }).populate('clientId', 'clientId businessName email');
+    // Determine query - scope by clientId if provided
+    const query = { email };
+    if (clientId) {
+      const Client = (await import('../models/Client.js')).default;
+      const clientDoc = await Client.findOne({ clientId: clientId.toString().toUpperCase() });
+      if (clientDoc) {
+        query.clientId = clientDoc._id;
+      }
+    }
+
+    const user = await User.findOne(query).populate('clientId', 'clientId businessName email');
     if (!user) {
       return res.status(401).json({
         success: false,

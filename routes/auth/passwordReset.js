@@ -12,9 +12,9 @@ const router = express.Router();
  */
 router.post('/forgot-password', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, clientId } = req.body;
 
-    console.log('[forgot-password] request', { email });
+    console.log('[forgot-password] request', { email, clientId });
 
     if (!email) {
       return res.status(400).json({
@@ -23,9 +23,19 @@ router.post('/forgot-password', async (req, res) => {
       });
     }
 
-    // Find user by email
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-    
+    // Determine query - scope by clientId if provided
+    const query = { email: email.toLowerCase().trim() };
+    if (clientId) {
+      const Client = (await import('../../models/Client.js')).default;
+      const clientDoc = await Client.findOne({ clientId: clientId.toString().toUpperCase() });
+      if (clientDoc) {
+        query.clientId = clientDoc._id;
+      }
+    }
+
+    // Find user
+    const user = await User.findOne(query);
+
     // Don't reveal if user exists or not (security best practice)
     // But we still need to send OTP only if user exists
     if (!user) {
@@ -63,7 +73,8 @@ router.post('/forgot-password', async (req, res) => {
     const emailResult = await sendEmailOTP(user.email, otp, {
       purpose: 'password-reset',
       sessionId,
-      expiresAt
+      expiresAt,
+      clientId: user.clientId // User already found, so use its clientId
     });
 
     if (!emailResult.success) {
@@ -130,9 +141,15 @@ router.post('/verify-reset-otp', async (req, res) => {
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetExpires = new Date(Date.now() + 15 * 60 * 1000);
     console.log('[verify-reset-otp] otp verified, issuing reset token', { email, resetToken, resetExpires });
-    
-    // Store reset token in user (we'll add this field)
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    // Store reset token in user
+    const userQuery = { email: email.toLowerCase().trim() };
+    if (req.body.clientId) {
+      const Client = (await import('../../models/Client.js')).default;
+      const clientDoc = await Client.findOne({ clientId: req.body.clientId.toString().toUpperCase() });
+      if (clientDoc) userQuery.clientId = clientDoc._id;
+    }
+    const user = await User.findOne(userQuery);
     if (user) {
       user.passwordResetToken = resetToken;
       user.passwordResetExpires = resetExpires; // 15 minutes
@@ -161,27 +178,17 @@ router.post('/verify-reset-otp', async (req, res) => {
  */
 router.post('/reset-password', async (req, res) => {
   try {
-    const { email, resetToken, newPassword } = req.body;
+    const { email, resetToken, newPassword, clientId } = req.body;
 
-    console.log('[reset-password] request', { email, resetToken, newPasswordLength: newPassword ? newPassword.length : 0 });
-
-    if (!email || !resetToken || !newPassword) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email, reset token, and new password are required'
-      });
+    const userQuery = { email: email.toLowerCase().trim() };
+    if (clientId) {
+      const Client = (await import('../../models/Client.js')).default;
+      const clientDoc = await Client.findOne({ clientId: clientId.toString().toUpperCase() });
+      if (clientDoc) userQuery.clientId = clientDoc._id;
     }
 
-    // Validate password length
-    if (newPassword.length < 6) {
-      return res.status(400).json({
-        success: false,
-        message: 'Password must be at least 6 characters long'
-      });
-    }
-
-    // Find user and verify reset token (select hidden fields to debug mismatches)
-    const user = await User.findOne({ email: email.toLowerCase().trim() })
+    // Find user and verify reset token
+    const user = await User.findOne(userQuery)
       .select('+passwordResetToken +passwordResetExpires');
 
     if (
@@ -191,20 +198,20 @@ router.post('/reset-password', async (req, res) => {
       !user.passwordResetExpires ||
       user.passwordResetExpires <= new Date()
     ) {
-    console.warn('[reset-password] invalid or expired token', {
-      email,
-      foundUser: !!user,
-      storedToken: user?.passwordResetToken,
-      storedExpires: user?.passwordResetExpires,
-      now: new Date()
-    });
+      console.warn('[reset-password] invalid or expired token', {
+        email,
+        foundUser: !!user,
+        storedToken: user?.passwordResetToken,
+        storedExpires: user?.passwordResetExpires,
+        now: new Date()
+      });
       return res.status(400).json({
         success: false,
         message: 'Invalid or expired reset token'
       });
     }
 
-  console.log('[reset-password] token valid, updating password', { email });
+    console.log('[reset-password] token valid, updating password', { email });
 
     // Update password
     user.password = newPassword;
@@ -231,7 +238,7 @@ router.post('/reset-password', async (req, res) => {
  */
 router.post('/resend-reset-otp', async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, clientId } = req.body;
 
     if (!email) {
       return res.status(400).json({
@@ -240,9 +247,20 @@ router.post('/resend-reset-otp', async (req, res) => {
       });
     }
 
+    // Determine query
+    const query = { email: email.toLowerCase().trim() };
+    let clientDoc = null;
+    if (clientId) {
+      const Client = (await import('../../models/Client.js')).default;
+      clientDoc = await Client.findOne({ clientId: clientId.toString().toUpperCase() });
+      if (clientDoc) {
+        query.clientId = clientDoc._id;
+      }
+    }
+
     // Find user
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
-    
+    const user = await User.findOne(query);
+
     if (!user) {
       // Return success message even if user doesn't exist (security)
       return res.json({
@@ -278,7 +296,9 @@ router.post('/resend-reset-otp', async (req, res) => {
     await otpRecord.save();
 
     // Send OTP via email
-    const emailResult = await sendEmailOTP(user.email, otp);
+    const emailResult = await sendEmailOTP(user.email, otp, {
+      clientId: clientDoc ? clientDoc._id : user.clientId
+    });
 
     if (!emailResult.success) {
       console.error('Failed to send email OTP:', emailResult.message);

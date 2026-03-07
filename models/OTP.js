@@ -20,6 +20,10 @@ const otpSchema = new mongoose.Schema({
     type: String,
     default: 'brahmakosh'
   },
+  clientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client'
+  },
   expiresAt: {
     type: Date,
     required: true,
@@ -29,7 +33,7 @@ const otpSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  
+
   type: {
     type: String,
     enum: ['email', 'mobile', 'whatsapp', 'sms', 'gupshup'],
@@ -47,7 +51,7 @@ const otpSchema = new mongoose.Schema({
 });
 
 // Custom validation: At least one of mobile or email must be provided
-otpSchema.pre('validate', function(next) {
+otpSchema.pre('validate', function (next) {
   if (!this.mobile && !this.email) {
     this.invalidate('mobile', 'Either mobile or email is required');
     this.invalidate('email', 'Either mobile or email is required');

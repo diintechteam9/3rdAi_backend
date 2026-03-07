@@ -18,7 +18,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Area from '../models/Area.js';
-import { authenticate } from '../middleware/authMiddleware.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 

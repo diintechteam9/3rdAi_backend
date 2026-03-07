@@ -9,13 +9,13 @@ import { getobject } from '../utils/s3.js';
 import Partner from '../models/Partner.js';
 import User from '../models/User.js';
 
-import { authenticate as authMiddleware } from '../middleware/authMiddleware.js';
+import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Middleware to adapt global authenticate to local chatRoutes expectations
-const authenticate = [
-  authMiddleware,
+const chatAuth = [
+  authenticate,
   (req, res, next) => {
     req.userId = req.user._id.toString();
     req.userType = req.user.role;
@@ -28,7 +28,7 @@ const authenticate = [
 // @route   PATCH /api/chat/partner/status
 // @desc    Update partner's online status (online/offline/busy)
 // @access  Private (Partner only)
-router.patch('/partner/status', authenticate, async (req, res) => {
+router.patch('/partner/status', chatAuth, async (req, res) => {
   try {
     if (req.userType !== 'partner') {
       return res.status(403).json({
@@ -72,7 +72,7 @@ router.patch('/partner/status', authenticate, async (req, res) => {
 // @route   GET /api/chat/partner/status
 // @desc    Get partner's current status
 // @access  Private (Partner only)
-router.get('/partner/status', authenticate, async (req, res) => {
+router.get('/partner/status', chatAuth, async (req, res) => {
   try {
     if (req.userType !== 'partner') {
       return res.status(403).json({
@@ -105,7 +105,7 @@ router.get('/partner/status', authenticate, async (req, res) => {
 // @route   GET /api/chat/partners
 // @desc    Get all available partners for users
 // @access  Private
-router.get('/partners', authenticate, async (req, res) => {
+router.get('/partners', chatAuth, async (req, res) => {
   try {
     const totalPartners = await Partner.countDocuments(req.tenantFilter);
     const activePartners = await Partner.countDocuments({ isActive: true, ...req.tenantFilter });
@@ -161,7 +161,7 @@ router.get('/partners', authenticate, async (req, res) => {
 // @route   GET /api/chat/partners/:partnerId
 // @desc    Get full partner details (for display in chat sidebar)
 // @access  Private
-router.get('/partners/:partnerId', authenticate, async (req, res) => {
+router.get('/partners/:partnerId', chatAuth, async (req, res) => {
   try {
     const { partnerId } = req.params;
     const partner = await Partner.findOne({ _id: partnerId, ...req.tenantFilter })
@@ -196,7 +196,7 @@ router.get('/partners/:partnerId', authenticate, async (req, res) => {
 // @route   POST /api/chat/conversations
 // @desc    Create conversation request
 // @access  Private
-router.post('/conversations', authenticate, async (req, res) => {
+router.post('/conversations', chatAuth, async (req, res) => {
   try {
     const { partnerId, userId, aadhaarNumber } = req.body;
 
@@ -281,7 +281,7 @@ router.post('/conversations', authenticate, async (req, res) => {
 // @route   GET /api/chat/partner/requests
 // @desc    Get all pending conversation requests for partner
 // @access  Private (Partner only)
-router.get('/partner/requests', authenticate, async (req, res) => {
+router.get('/partner/requests', chatAuth, async (req, res) => {
   try {
     if (req.userType !== 'partner') {
       return res.status(403).json({
@@ -320,7 +320,7 @@ router.get('/partner/requests', authenticate, async (req, res) => {
 // @route   POST /api/chat/partner/requests/:conversationId/accept
 // @desc    Accept a conversation request
 // @access  Private (Partner only)
-router.post('/partner/requests/:conversationId/accept', authenticate, async (req, res) => {
+router.post('/partner/requests/:conversationId/accept', chatAuth, async (req, res) => {
   try {
     if (req.userType !== 'partner') {
       return res.status(403).json({
@@ -397,7 +397,7 @@ router.post('/partner/requests/:conversationId/accept', authenticate, async (req
 // @route   POST /api/chat/partner/requests/:conversationId/reject
 // @desc    Reject a conversation request
 // @access  Private (Partner only)
-router.post('/partner/requests/:conversationId/reject', authenticate, async (req, res) => {
+router.post('/partner/requests/:conversationId/reject', chatAuth, async (req, res) => {
   try {
     if (req.userType !== 'partner') {
       return res.status(403).json({
@@ -445,7 +445,7 @@ router.post('/partner/requests/:conversationId/reject', authenticate, async (req
 // @route   GET /api/chat/conversations
 // @desc    Get all conversations (accepted/active) for logged-in user/partner
 // @access  Private
-router.get('/conversations', authenticate, async (req, res) => {
+router.get('/conversations', chatAuth, async (req, res) => {
   try {
     const isPartner = req.userType === 'partner';
     const query = isPartner
@@ -529,7 +529,7 @@ router.get('/conversations', authenticate, async (req, res) => {
 // @route   GET /api/chat/conversations/:conversationId/messages
 // @desc    Get messages for a specific conversation
 // @access  Private
-router.get('/conversations/:conversationId/messages', authenticate, async (req, res) => {
+router.get('/conversations/:conversationId/messages', chatAuth, async (req, res) => {
   try {
     const { conversationId } = req.params;
     const { page = 1, limit = 50 } = req.query;

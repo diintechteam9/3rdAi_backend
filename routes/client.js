@@ -80,21 +80,21 @@ router.post('/users', authenticate, authorize('client', 'admin', 'super_admin'),
       });
     }
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'User already exists with this email'
-      });
-    }
-
-    console.log('[Client API] Creating user for client:', req.user._id.toString());
-
     const clientId = req.user.role === 'client' ? req.user._id : req.body.clientId;
 
     if (!clientId && req.user.role !== 'super_admin') {
       return res.status(403).json({ success: false, message: 'Client context required.' });
     }
+
+    const existingUser = await User.findOne({ email, clientId });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: 'User already exists with this email for this client'
+      });
+    }
+
+    console.log('[Client API] Creating user for client:', clientId ? clientId.toString() : 'Super Admin');
 
     const user = new User({
       email,

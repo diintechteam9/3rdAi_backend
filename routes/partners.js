@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import multer from 'multer';
 import { OAuth2Client } from 'google-auth-library';
 import Partner from '../models/Partner.js';
-import { generateToken, authenticate } from '../middleware/authMiddleware.js';
+import { authenticate, authorize } from '../middleware/auth.js';
 import Client from '../models/Client.js';
 import Area from '../models/Area.js';
 import { uploadToS3, getobject } from '../utils/s3.js';

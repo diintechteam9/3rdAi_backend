@@ -51,8 +51,8 @@ router.post('/register-with-image', upload.single('image'), async (req, res) => 
       });
     }
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+    // Check if user already exists for this specific client
+    const existingUser = await User.findOne({ email: email.toLowerCase().trim(), clientId: clientDoc._id });
     if (existingUser) {
       if (existingUser.approvalStatus === 'rejected') {
         await User.deleteOne({ _id: existingUser._id });
