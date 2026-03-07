@@ -24,6 +24,8 @@ import clientProfileMobileRoutes from './routes/mobile/clientProfile.js';
 import userProfileMobileRoutes from './routes/mobile/userProfile.js';
 import partnerProfileMobileRoutes from './routes/mobile/partnerProfile.js';
 import mobileContentRoutes from './routes/mobile/content.js';
+import mobileCasesRoutes from './routes/mobileCases.js';
+
 import chatRoutes from './routes/mobile/chat.js';
 import voiceRoutes from './routes/mobile/voice.js';
 import uploadRoutes from './routes/upload.js';
@@ -127,6 +129,8 @@ app.use('/api/super-admin', superAdminRoutes);
 // Mobile API Routes
 app.use('/api/mobile/client', clientProfileMobileRoutes);
 app.use('/api/mobile/user', userProfileMobileRoutes);
+app.use('/api/mobile/cases', mobileCasesRoutes);
+
 // app.use('/api/mobile/realtime-agent', realtimeAgentRoutes);
 app.use('/api/mobile/chat', chatRoutes);
 app.use('/api/mobile/voice', voiceRoutes);
