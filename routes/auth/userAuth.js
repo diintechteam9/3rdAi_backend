@@ -155,7 +155,14 @@ router.post('/login/:clientId', async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email }).select('+password');
+    const Client = (await import('../../models/Client.js')).default;
+    const clientDoc = await Client.findOne({ clientId: clientCode.toUpperCase() });
+
+    if (!clientDoc) {
+      return res.status(404).json({ success: false, message: 'Invalid Client ID' });
+    }
+
+    const user = await User.findOne({ email, clientId: clientDoc._id }).select('+password');
     if (!user) {
       return res.status(401).json({
         success: false,
